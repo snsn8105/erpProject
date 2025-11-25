@@ -1,13 +1,13 @@
-package com.programpractice.approvall_request_service;
+package com.programpractice.approval_request_service;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class ApprovallRequestServiceApplication {
+public class ApprovalRequestServiceApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(ApprovallRequestServiceApplication.class, args);
+		SpringApplication.run(ApprovalRequestServiceApplication.class, args);
 	}
 
 }
