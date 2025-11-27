@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  # Employee Service용 MySQL
+  mysql:
+    image: mysql:8.0
+    container_name: erp-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: erp_employee_db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: erpPassword
+      TZ: Asia/Seoul
+    volumes:
+      # 데이터 영구 저장 (컨테이너 내려도 데이터 유지)
+      - ./mysql_data:/var/lib/mysql
+      # 초기화 스크립트 자동 실행 
+      - ./approval-processing-service/scripts/init_mysql.sql:/docker-entrypoint-initdb.d/init.sql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    restart: always
+
+  # Approval Request Service용 MongoDB
+  mongodb:
+    image: mongo:8.0
+    container_name: erp-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+      TZ: Asia/Seoul
+    volumes:
+      - ./mongo_data:/data/db
+    restart: always
+
+# (선택 사항) MongoDB 관리를 위한 GUI 툴이 필요하다면 주석 해제
+#  mongo-express:
+#    image: mongo-express
+#    ports:
+#      - "8081:8081"
+#    environment:
+#      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+#      ME_CONFIG_MONGODB_ADMINPASSWORD: root
+#      ME_CONFIG_MONGODB_URL: mongodb://root:root@mongodb:27017/
+#    depends_on:
+#      - mongodb
