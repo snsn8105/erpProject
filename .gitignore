@@ -1,2 +1,3 @@
 mongo_data/*
 mysql_data/*
+rabbitmq_data/*

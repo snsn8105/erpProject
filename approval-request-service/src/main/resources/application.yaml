@@ -1,3 +1,25 @@
 spring:
   application:
-    name: approvall-request-service
+    name: approval-request-service
+  
+  data:
+    mongodb:
+      host: localhost
+      port: 27017
+      database: erp_mongodb
+      username: root
+      password: root
+      authentication-database: admin
+
+# Employee Service 연동
+employee:
+  service:
+    url: http://localhost:8081
+
+logging:
+  level:
+    com.example.approval.request: DEBUG
+    org.springframework.data.mongodb: DEBUG
+
+server:
+  port: 8082
