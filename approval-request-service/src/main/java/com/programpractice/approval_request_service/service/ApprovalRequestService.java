@@ -1,7 +1,9 @@
 package com.programpractice.approval_request_service.service;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.stereotype.Service;
 
 import com.programpractice.approval_request_service.client.EmployeeServiceClient;
@@ -14,10 +16,10 @@ import com.programpractice.approval_request_service.exception.ApprovalRequestNot
 import com.programpractice.approval_request_service.exception.InvalidApprovalStepsException;
 import com.programpractice.approval_request_service.repository.ApprovalRequestRepository;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+// 결재 요청 서비스
 @Service
 @RequiredArgsConstructor
 @Slf4j

@@ -10,7 +10,23 @@ spring:
       username: root
       password: root
       authentication-database: admin
-
+  # RabbitMQ 설정
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: admin
+    password: admin123
+    listener:
+      simple:
+        acknowledge-mode: auto
+        concurrency: 3
+        max-concurrency: 10
+        retry:
+          enabled: true
+          initial-interval: 1000
+          max-attempts: 3
+          multiplier: 2.0
+          
 # Employee Service 연동
 employee:
   service:
