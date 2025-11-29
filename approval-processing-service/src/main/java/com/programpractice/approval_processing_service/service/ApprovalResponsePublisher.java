@@ -22,7 +22,7 @@ public class ApprovalResponsePublisher {
     public void publishApprovalResult(ApprovalResponseMessage message) {
         try {
             log.info("=== 승인 처리 결과 발행 ===");
-            log.info("requestId: {}", message.getRequestId());
+            log.info("approvalId: {}", message.getApprovalId());
             log.info("step: {}", message.getStep());
             log.info("status: {}", message.getStatus());
             
@@ -32,11 +32,11 @@ public class ApprovalResponsePublisher {
                     message
             );
             
-            log.info("승인 처리 결과 발행 완료: requestId={}", message.getRequestId());
+            log.info("승인 처리 결과 발행 완료: approvalId={}", message.getApprovalId());
             
         } catch (Exception e) {
-            log.error("승인 처리 결과 발행 실패: requestId={}", 
-                    message.getRequestId(), e);
+            log.error("승인 처리 결과 발행 실패: approvalId={}", 
+                    message.getApprovalId(), e);
             throw new RuntimeException("메시지 발행 실패", e);
         }
     }

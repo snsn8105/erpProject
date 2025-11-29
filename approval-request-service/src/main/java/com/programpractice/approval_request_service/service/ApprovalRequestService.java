@@ -10,6 +10,7 @@ import com.programpractice.approval_request_service.client.EmployeeServiceClient
 import com.programpractice.approval_request_service.document.ApprovalRequest;
 import com.programpractice.approval_request_service.dto.ApprovalCreateRequest;
 import com.programpractice.approval_request_service.dto.ApprovalCreateResponse;
+import com.programpractice.approval_request_service.dto.ApprovalRequestMessage;
 import com.programpractice.approval_request_service.dto.ApprovalResponse;
 import com.programpractice.approval_request_service.dto.StepRequest;
 import com.programpractice.approval_request_service.exception.ApprovalRequestNotFoundException;
@@ -28,7 +29,8 @@ public class ApprovalRequestService {
     private final ApprovalRequestRepository approvalRequestRepository;
     private final SequenceGeneratorService sequenceGeneratorService;
     private final EmployeeServiceClient employeeServiceClient;
-    
+    private final ApprovalMessagePublisher approvalMessagePublisher;
+
     private static final String APPROVAL_REQUEST_SEQ = "approval_request_id";
     
     // 결재 요청 생성
@@ -71,16 +73,44 @@ public class ApprovalRequestService {
                 .updatedAt(LocalDateTime.now())
                 .build();
         
-        approvalRequestRepository.save(approvalRequest);
+        ApprovalRequest saved = approvalRequestRepository.save(approvalRequest);
         
         log.info("결재 요청 생성 완료: requestId={}", requestId);
         
         // 7. TODO: gRPC 혹은 RabbitMQ로 Approval Processing Service에 RequestApproval 호출
-        // 지금은 스킵하고 나중에 구현
+        publishApprovalRequestMessage(saved, approvalMessagePublisher);
         
         return new ApprovalCreateResponse(requestId);
     }
     
+    // RabbitMQ로 승인 요청 메시지 발행
+    private void publishApprovalRequestMessage(ApprovalRequest approvalRequest, ApprovalMessagePublisher approvalMessagePublisher) {
+        try {
+            log.info("=== 승인 요청 메시지 발행 시작 ===");
+            log.info("requestId: {}", approvalRequest.getRequestId());
+            log.info("mongoId: {}", approvalRequest.getId());
+            
+            ApprovalRequestMessage message = ApprovalRequestMessage.builder()
+                    .approvalId(approvalRequest.getId())  // MongoDB ObjectId
+                    .requesterId(approvalRequest.getRequesterId().longValue())
+                    .requesterName("Requester_" + approvalRequest.getRequesterId())  // TODO: 실제 이름 조회
+                    .title(approvalRequest.getTitle())
+                    .content(approvalRequest.getContent())
+                    .requestedAt(approvalRequest.getCreatedAt())
+                    .build();
+            
+            approvalMessagePublisher.publishApprovalRequest(message);
+            
+            log.info("승인 요청 메시지 발행 완료: requestId={}", approvalRequest.getRequestId());
+            
+        } catch (Exception e) {
+            log.error("승인 요청 메시지 발행 실패: requestId={}", 
+                    approvalRequest.getRequestId(), e);
+            // 메시지 발행 실패 시에도 요청은 생성되었으므로 예외를 던지지 않음
+            // 필요시 재시도 로직 추가
+        }
+    }
+
     // 결재 요청 목록 조회
     public List<ApprovalResponse> getAllApprovalRequests() {
         log.info("결재 요청 목록 조회");

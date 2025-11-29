@@ -10,12 +10,19 @@ spring:
       username: root
       password: root
       authentication-database: admin
+  
   # RabbitMQ 설정
   rabbitmq:
     host: localhost
     port: 5672
     username: admin
     password: admin123
+    # Publisher Confirms 활성화
+    publisher-confirm-type: correlated
+    # Publisher Returns 활성화
+    publisher-returns: true
+    template:
+      mandatory: true
     listener:
       simple:
         acknowledge-mode: auto
@@ -34,7 +41,8 @@ employee:
 
 logging:
   level:
-    com.example.approval.request: DEBUG
+    com.programpractice.approval_request_service: DEBUG
+    org.springframework.amqp: DEBUG
     org.springframework.data.mongodb: DEBUG
 
 server:

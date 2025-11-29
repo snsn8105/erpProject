@@ -1,16 +1,25 @@
 package com.programpractice.approval_processing_service.controller;
 
-import com.programpractice.approval_processing_service.dto.*;
-import com.programpractice.approval_processing_service.service.ApprovalResponsePublisher;
+import java.util.List;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.programpractice.approval_processing_service.dto.ApprovalDetailResponse;
+import com.programpractice.approval_processing_service.dto.ApprovalResponseMessage;
+import com.programpractice.approval_processing_service.dto.ProcessApprovalRequest;
+import com.programpractice.approval_processing_service.dto.ReturnApprovalResult;
 import com.programpractice.approval_processing_service.service.ApprovalProcessingService;
+import com.programpractice.approval_processing_service.service.ApprovalResponsePublisher;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.time.LocalDateTime;
-import java.util.List;
 
 /**
  * 승인 처리 REST API Controller
@@ -73,13 +82,13 @@ public class ApprovalController {
             
             // 2. RabbitMQ로 결과 발행
             ApprovalResponseMessage message = ApprovalResponseMessage.builder()
-                    .requestId(requestId)
+                    .approvalId(requestId)
                     .step(result.getStep())
                     .approverId(result.getApproverId())
                     .status(result.getStatus())
                     .finalStatus(result.getStatus()) // TODO: finalStatus 계산 로직
                     .comment(request.getComment())
-                    .updatedAt(result.getUpdatedAt())
+                    .processedAt(result.getUpdatedAt())
                     .success(true)
                     .build();
             
