@@ -21,10 +21,13 @@ public class ApprovalResponsePublisher {
      */
     public void publishApprovalResult(ApprovalResponseMessage message) {
         try {
-            log.info("=== 승인 처리 결과 발행 ===");
-            log.info("approvalId: {}", message.getApprovalId());
+            log.info("=== 승인 처리 결과 발행 시작 ===");
+            log.info("requestId: {}", message.getRequestId());
             log.info("step: {}", message.getStep());
+            log.info("approverId: {}", message.getApproverId());
             log.info("status: {}", message.getStatus());
+            log.info("Exchange: {}", RabbitMQConfig.APPROVAL_EXCHANGE);
+            log.info("RoutingKey: {}", RabbitMQConfig.APPROVAL_RESPONSE_ROUTING_KEY);
             
             rabbitTemplate.convertAndSend(
                     RabbitMQConfig.APPROVAL_EXCHANGE,
@@ -32,11 +35,11 @@ public class ApprovalResponsePublisher {
                     message
             );
             
-            log.info("승인 처리 결과 발행 완료: approvalId={}", message.getApprovalId());
+            log.info("=== 승인 처리 결과 발행 완료 ===");
             
         } catch (Exception e) {
-            log.error("승인 처리 결과 발행 실패: approvalId={}", 
-                    message.getApprovalId(), e);
+            log.error("=== 승인 처리 결과 발행 실패 ===", e);
+            log.error("requestId: {}", message.getRequestId());
             throw new RuntimeException("메시지 발행 실패", e);
         }
     }

@@ -28,7 +28,7 @@ public class ApprovalMessagePublisher {
             log.info("Exchange: {}", RabbitMQConfig.APPROVAL_EXCHANGE);
             log.info("RoutingKey: {}", RabbitMQConfig.APPROVAL_REQUEST_ROUTING_KEY);
             log.info("Message: approvalId={}, requesterId={}, title={}", 
-                    message.getApprovalId(), message.getRequesterId(), message.getTitle());
+                    message.getRequestId(), message.getRequesterId(), message.getTitle());
             
             // RabbitTemplate 상태 확인
             if (rabbitTemplate.getConnectionFactory() == null) {

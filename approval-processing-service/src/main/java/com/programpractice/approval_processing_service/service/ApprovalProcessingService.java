@@ -1,24 +1,17 @@
 package com.programpractice.approval_processing_service.service;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.stream.Collectors;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import com.programpractice.approval_processing_service.dto.ApprovalDetailResponse;
-import com.programpractice.approval_processing_service.dto.ApprovalRequestMessage;
-import com.programpractice.approval_processing_service.dto.ApprovalResponseMessage;
-import com.programpractice.approval_processing_service.dto.ApprovalStepDto;
-import com.programpractice.approval_processing_service.dto.ProcessApprovalRequest;
-import com.programpractice.approval_processing_service.dto.ReturnApprovalResult;
+import com.programpractice.approval_processing_service.dto.*;
 import com.programpractice.approval_processing_service.entity.ApprovalRequest;
 import com.programpractice.approval_processing_service.entity.ApprovalStep;
 import com.programpractice.approval_processing_service.repository.ApprovalRequestRepository;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 승인 처리 서비스
@@ -38,7 +31,7 @@ public class ApprovalProcessingService {
      * - 승인 단계 생성 (예: 2단계 승인)
      */
     public ApprovalResponseMessage processApprovalRequest(ApprovalRequestMessage message) {
-        log.info("승인 요청 처리 시작: approvalId={}, requesterId={}", 
+        log.info("승인 요청 처리 시작: requestId={}, requesterId={}", 
                 message.getRequestId(), message.getRequesterId());
         
         try {
@@ -54,7 +47,7 @@ public class ApprovalProcessingService {
                     .build();
             
             // 3. 승인 단계 생성 (예시: 2단계 승인)
-            createApprovalSteps(approvalRequest, message.getRequesterId());
+            createApprovalSteps(approvalRequest, message.getSteps());
             
             // 4. 저장
             ApprovalRequest saved = approvalRequestRepository.save(approvalRequest);
@@ -65,7 +58,7 @@ public class ApprovalProcessingService {
             
             // 6. 응답 메시지 생성
             ApprovalResponseMessage response = ApprovalResponseMessage.builder()
-                    .approvalId(saved.getRequestId())
+                    .requestId(message.getRequestId())
                     .status("pending")
                     .approverId(firstStep.getApproverId())
                     .approverName("Approver_" + firstStep.getApproverId())
@@ -74,14 +67,14 @@ public class ApprovalProcessingService {
                     .success(true)
                     .build();
             
-            log.info("승인 요청 처리 완료: approvalId={}", response.getApprovalId());
+            log.info("승인 요청 처리 완료: requestId={}", message.getRequestId());
             return response;
             
         } catch (Exception e) {
-            log.error("승인 요청 처리 실패: approvalId={}", message.getRequestId(), e);
+            log.error("승인 요청 처리 실패: requestId={}", message.getRequestId(), e);
             
             return ApprovalResponseMessage.builder()
-                    .approvalId(message.getRequestId())
+                    .requestId(message.getRequestId())
                     .success(false)
                     .errorMessage(e.getMessage())
                     .processedAt(LocalDateTime.now())
@@ -90,27 +83,27 @@ public class ApprovalProcessingService {
     }
     
     /**
-     * 승인 단계 생성 (예시: 2단계 승인)
+     * 승인 단계 생성 (입력받은 정보 기반)
      */
-    private void createApprovalSteps(ApprovalRequest approvalRequest, Long requesterId) {
-        // TODO: 실제로는 조직도/직급에 따라 승인자 결정
-        // 현재는 예시로 requesterId + 1, requesterId + 2를 승인자로 설정
+    private void createApprovalSteps(ApprovalRequest approvalRequest, List<ApprovalRequestMessage.ApprovalStepDto> stepRequests) {
         
-        ApprovalStep step1 = ApprovalStep.builder()
-                .step(1)
-                .approverId(requesterId + 1)  // 1차 승인자
-                .build();
-        
-        ApprovalStep step2 = ApprovalStep.builder()
-                .step(2)
-                .approverId(requesterId + 2)  // 2차 승인자
-                .build();
-        
-        approvalRequest.addStep(step1);
-        approvalRequest.addStep(step2);
-        
-        log.info("승인 단계 생성 완료: step1={}, step2={}", 
-                step1.getApproverId(), step2.getApproverId());
+        // 유효성 검사: 단계 정보가 없으면 예외 처리
+        if (stepRequests == null || stepRequests.isEmpty()) {
+            throw new IllegalArgumentException("승인 단계 정보가 비어있습니다.");
+        }
+
+        // 입력받은 리스트를 순회하며 Entity 생성
+        for (ApprovalRequestMessage.ApprovalStepDto stepReq : stepRequests) {
+            ApprovalStep step = ApprovalStep.builder()
+                    .step(stepReq.getStep())
+                    .approverId(stepReq.getApproverId())
+                    .status(com.programpractice.approval_processing_service.entity.ApprovalStatus.PENDING) // 초기 상태
+                    .build();
+            
+            approvalRequest.addStep(step);
+        }
+
+        log.info("승인 단계 생성 완료: steps_count={}", stepRequests.size());
     }
     
     /**

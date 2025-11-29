@@ -31,7 +31,7 @@ public class ApprovalRequestListener {
     @RabbitListener(queues = RabbitMQConfig.APPROVAL_REQUEST_QUEUE)
     public void handleApprovalRequest(ApprovalRequestMessage message) {
         log.info("=== 승인 요청 메시지 수신 ===");
-        log.info("approvalId: {}", message.getRequestId());
+        log.info("requestId: {}", message.getRequestId());
         log.info("requesterId: {}", message.getRequesterId());
         log.info("title: {}", message.getTitle());
         
@@ -41,16 +41,16 @@ public class ApprovalRequestListener {
             // 승인 요청 처리 (H2 In-Memory DB에 저장)
             response = processingService.processApprovalRequest(message);
             
-            log.info("승인 요청 처리 완료: approvalId={}, status={}", 
+            log.info("승인 요청 처리 완료: requestId={}, status={}", 
                     message.getRequestId(), response.getStatus());
             
         } catch (Exception e) {
-            log.error("승인 요청 처리 중 오류 발생: approvalId={}", 
+            log.error("승인 요청 처리 중 오류 발생: requestId={}", 
                     message.getRequestId(), e);
             
             // 에러 응답 생성
             response = ApprovalResponseMessage.builder()
-                    .approvalId(message.getRequestId())
+                    .requestId(message.getRequestId())
                     .status("ERROR")
                     .success(false)
                     .errorMessage(e.getMessage())

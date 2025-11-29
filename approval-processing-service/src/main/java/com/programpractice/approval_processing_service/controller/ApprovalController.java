@@ -1,25 +1,16 @@
 package com.programpractice.approval_processing_service.controller;
 
-import java.util.List;
-
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import com.programpractice.approval_processing_service.dto.ApprovalDetailResponse;
-import com.programpractice.approval_processing_service.dto.ApprovalResponseMessage;
-import com.programpractice.approval_processing_service.dto.ProcessApprovalRequest;
-import com.programpractice.approval_processing_service.dto.ReturnApprovalResult;
-import com.programpractice.approval_processing_service.service.ApprovalProcessingService;
+import com.programpractice.approval_processing_service.dto.*;
 import com.programpractice.approval_processing_service.service.ApprovalResponsePublisher;
-
+import com.programpractice.approval_processing_service.service.ApprovalProcessingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 승인 처리 REST API Controller
@@ -38,8 +29,7 @@ public class ApprovalController {
      * 결재자 대기 목록 조회
      */
     @GetMapping("/{approverId}")
-    public ResponseEntity<List<ApprovalDetailResponse>> getApprovalList(
-            @PathVariable Long approverId) {
+    public ResponseEntity<List<ApprovalDetailResponse>> getApprovalList(@PathVariable Long approverId) {
         
         log.info("GET /process/{} 호출", approverId);
         
@@ -53,17 +43,6 @@ public class ApprovalController {
     /**
      * POST /process/{approverId}/{requestId}
      * 승인 또는 반려 처리
-     * 
-     * Request Body:
-     * {
-     *   "status": "approved" 또는 "rejected",
-     *   "comment": "코멘트 (선택)"
-     * }
-     * 
-     * Response:
-     * 1. pending 목록에 해당 approverId를 가진 인덱스가 대기 리스트에 수신 결과 전달
-     * 2. 해당 approverId를 가진 인덱스가 수신 결과 정보 저장
-     * 3. ApprovalResponse로 {"status": "received"} 반환
      */
     @PostMapping("/{approverId}/{requestId}")
     public ResponseEntity<ApprovalResponseDto> processApproval(
@@ -82,13 +61,14 @@ public class ApprovalController {
             
             // 2. RabbitMQ로 결과 발행
             ApprovalResponseMessage message = ApprovalResponseMessage.builder()
-                    .approvalId(requestId)
+                    .requestId(requestId)
                     .step(result.getStep())
                     .approverId(result.getApproverId())
                     .status(result.getStatus())
-                    .finalStatus(result.getStatus()) // TODO: finalStatus 계산 로직
+                    .finalStatus(result.getStatus())
                     .comment(request.getComment())
-                    .processedAt(result.getUpdatedAt())
+                    .updatedAt(result.getUpdatedAt())
+                    .processedAt(LocalDateTime.now())
                     .success(true)
                     .build();
             

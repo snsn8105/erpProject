@@ -19,7 +19,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ApprovalResponseListener {
     
-    // 실제 승인 문서 업데이트 서비스 주입
     private final ApprovalRequestRepository approvalRequestRepository;
     
     /**
@@ -29,27 +28,29 @@ public class ApprovalResponseListener {
     public void handleApprovalResponse(ApprovalResponseMessage message) {
         try {
             log.info("=== 승인 응답 메시지 수신 ===");
-            log.info("approvalId: {}", message.getApprovalId());
+            log.info("requestId: {}", message.getRequestId());
             log.info("status: {}", message.getStatus());
             log.info("approverId: {}", message.getApproverId());
-            log.info("success: " + message.isSuccess());
+            log.info("success: {}", message.isSuccess());
             
             if (!message.isSuccess()) {
-                log.error("승인 처리 실패: approvalId={}, error={}", 
-                        message.getApprovalId(), message.getErrorMessage());
+                log.error("승인 처리 실패: requestId={}, error={}", 
+                        message.getRequestId(), message.getErrorMessage());
                 return;
             }
-
-            // MongoDB 문서 업데이트 로직 구현
-            ApprovalRequest approvalRequest = 
-                    approvalRequestRepository.findById(message.getApprovalId())
-                    .orElseThrow(() -> new IllegalArgumentException("승인 요청을 찾을 수 없습니다: " + message.getApprovalId()));
+            
+            // MongoDB 문서 조회
+            ApprovalRequest approvalRequest = approvalRequestRepository.findById(message.getRequestId())
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "승인 요청을 찾을 수 없습니다: " + message.getRequestId()));
+            
+            log.info("MongoDB 문서 조회 완료: requestId={}", approvalRequest.getRequestId());
             
             // 단계별 상태 업데이트
-            if (message.getStatus() != null && !message.getStatus().isEmpty()){
+            if (message.getStatus() != null && !message.getStatus().isEmpty()) {
                 updateStepStatus(approvalRequest, message);
             }
-
+            
             // 최종 상태 업데이트 (모든 단계 완료 또는 반려 시)
             if ("approved".equals(message.getStatus()) && approvalRequest.areAllStepsApproved()) {
                 approvalRequest.updateFinalStatus("approved");
@@ -58,19 +59,23 @@ public class ApprovalResponseListener {
                 approvalRequest.updateFinalStatus("rejected");
                 log.info("승인 반려: requestId={}", approvalRequest.getRequestId());
             }
-
+            
+            // 저장
             approvalRequestRepository.save(approvalRequest);
-            log.info("승인 응답 처리 완료: approvalId={}, finalStatus={}", 
-                    message.getApprovalId(), approvalRequest.getFinalStatus());
-
+            
+            log.info("승인 응답 처리 완료: requestId={}, finalStatus={}", 
+                    message.getRequestId(), approvalRequest.getFinalStatus());
+            
         } catch (Exception e) {
-            log.error("승인 응답 메시지 처리 중 오류 발생: approvalId={}", 
-                    message.getApprovalId(), e);
-            // TODO: 에러 처리 (DLQ로 전송 등)
+            log.error("승인 응답 메시지 처리 중 오류 발생: requestId={}", 
+                    message.getRequestId(), e);
+            // TODO: DLQ로 전송 또는 재시도 로직
         }
     }
-
-    // 단계별 상태 업데이트
+    
+    /**
+     * 단계별 상태 업데이트
+     */
     private void updateStepStatus(ApprovalRequest approvalRequest, ApprovalResponseMessage message) {
         try {
             // approverId로 해당 단계 찾기
