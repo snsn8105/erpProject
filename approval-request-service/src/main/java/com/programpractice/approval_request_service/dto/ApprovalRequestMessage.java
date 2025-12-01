@@ -39,5 +39,8 @@ public class ApprovalRequestMessage implements Serializable {
     public static class ApprovalStepDto implements Serializable {
         private Integer step;
         private Long approverId;
+        private String status;      // 추가
+        private String comment;     // 추가
+        private LocalDateTime processedAt; // 추가
     }
 }
