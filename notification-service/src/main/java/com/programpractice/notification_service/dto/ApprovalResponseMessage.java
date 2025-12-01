@@ -1,19 +1,19 @@
-package com.programpractice.approval_processing_service.dto;
+package com.programpractice.notification_service.dto;
 
 import lombok.*;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-/**
- * 승인 응답 메시지 (RabbitMQ Producer용)
- */
+// RabbitMQ로 받는 승인 응답 메시지
+// Approval Request Service에서 발행
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class ApprovalResponseMessage implements Serializable {
-    private String requestId;            // MongoDB의 approvalId
+    
+    private String requestId;            // MongoDB ObjectId
     private Integer step;                // 처리된 단계
     private Long approverId;             // 승인자 ID
     private String approverName;         // 승인자 이름

@@ -31,4 +31,9 @@ public class ApprovalResponseMessage implements Serializable {
     private LocalDateTime processedAt;   // 처리 시간
     private boolean success;             // 처리 성공 여부
     private String errorMessage;         // 에러 메시지
+
+    // 추가 정보
+    private Integer numericRequestId;    // 숫자 형태의 요청 ID
+    private Integer requesterId;         // 요청자 ID
+    private String title;                // 승인 요청 제목
 }
