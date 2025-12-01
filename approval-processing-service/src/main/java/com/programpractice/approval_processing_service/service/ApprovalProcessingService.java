@@ -1,9 +1,10 @@
 package com.programpractice.approval_processing_service.service;
 
 import com.programpractice.approval_processing_service.dto.*;
-import com.programpractice.approval_processing_service.entity.ApprovalRequest;
-import com.programpractice.approval_processing_service.entity.ApprovalStep;
-import com.programpractice.approval_processing_service.repository.ApprovalRequestRepository;
+import com.programpractice.approval_processing_service.model.ApprovalRequest;
+import com.programpractice.approval_processing_service.model.ApprovalStep;
+import com.programpractice.approval_processing_service.repository.InMemoryApprovalRepository;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,7 +23,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ApprovalProcessingService {
     
-    private final ApprovalRequestRepository approvalRequestRepository;
+    private final InMemoryApprovalRepository approvalRequestRepository;
     private final EmployeeValidationService employeeValidationService;
     
     /**
@@ -97,7 +98,7 @@ public class ApprovalProcessingService {
             ApprovalStep step = ApprovalStep.builder()
                     .step(stepReq.getStep())
                     .approverId(stepReq.getApproverId())
-                    .status(com.programpractice.approval_processing_service.entity.ApprovalStatus.PENDING) // 초기 상태
+                    .status(com.programpractice.approval_processing_service.model.ApprovalStatus.PENDING) // 초기 상태
                     .build();
             
             approvalRequest.addStep(step);
@@ -114,7 +115,7 @@ public class ApprovalProcessingService {
                 approverId, requestId, request.getStatus());
         
         // 1. 승인 요청 조회
-        ApprovalRequest approvalRequest = approvalRequestRepository.findByRequestIdWithSteps(requestId)
+        ApprovalRequest approvalRequest = approvalRequestRepository.findByRequestId(requestId)
                 .orElseThrow(() -> new IllegalArgumentException("승인 요청을 찾을 수 없습니다: " + requestId));
         
         // 2. 다음 PENDING 단계 찾기
@@ -138,7 +139,7 @@ public class ApprovalProcessingService {
             if (nextStep == null) {
                 // 모든 단계 승인 완료
                 approvalRequest.updateFinalStatus(
-                    com.programpractice.approval_processing_service.entity.ApprovalStatus.APPROVED
+                    com.programpractice.approval_processing_service.model.ApprovalStatus.APPROVED
                 );
                 log.info("최종 승인 완료: requestId={}", requestId);
             }
@@ -146,7 +147,7 @@ public class ApprovalProcessingService {
         } else if ("rejected".equalsIgnoreCase(request.getStatus())) {
             currentStep.reject(request.getComment());
             approvalRequest.updateFinalStatus(
-                com.programpractice.approval_processing_service.entity.ApprovalStatus.REJECTED
+                com.programpractice.approval_processing_service.model.ApprovalStatus.REJECTED
             );
             log.info("승인 반려: step={}", currentStep.getStep());
         } else {

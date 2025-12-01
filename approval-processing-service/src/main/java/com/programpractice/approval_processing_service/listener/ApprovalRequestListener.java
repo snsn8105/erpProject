@@ -38,7 +38,7 @@ public class ApprovalRequestListener {
         ApprovalResponseMessage response;
         
         try {
-            // 승인 요청 처리 (H2 In-Memory DB에 저장)
+            // 승인 요청 처리 (In-Memory에 저장)
             response = processingService.processApprovalRequest(message);
             
             log.info("승인 요청 처리 완료: requestId={}, status={}", 
