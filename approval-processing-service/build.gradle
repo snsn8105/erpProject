@@ -2,7 +2,6 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '3.5.8'
 	id 'io.spring.dependency-management' version '1.1.7'
-	id 'com.google.protobuf' version '0.9.4'
 }
 
 group = 'com.programpractice'
@@ -30,7 +29,6 @@ ext {
 }
 
 dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
@@ -38,9 +36,6 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
 	// RabbitMQ
 	implementation 'org.springframework.boot:spring-boot-starter-amqp'
-	
-	// H2 Database (In-Memory)
-	runtimeOnly 'com.h2database:h2'
 	
 	implementation 'org.springframework.grpc:spring-grpc-server-web-spring-boot-starter'
 	implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
@@ -56,24 +51,6 @@ dependencies {
 dependencyManagement {
 	imports {
 		mavenBom "org.springframework.grpc:spring-grpc-dependencies:${springGrpcVersion}"
-	}
-}
-
-protobuf {
-	protoc {
-		artifact = 'com.google.protobuf:protoc'
-	}
-	plugins {
-		grpc {
-			artifact = 'io.grpc:protoc-gen-grpc-java'
-		}
-	}
-	generateProtoTasks {
-		all()*.plugins {
-			grpc {
-				option '@generated=omit'
-			}
-		}
 	}
 }
 
