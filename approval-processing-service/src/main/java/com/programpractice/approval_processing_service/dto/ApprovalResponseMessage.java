@@ -13,7 +13,8 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class ApprovalResponseMessage implements Serializable {
-    private String requestId;            // MongoDB의 approvalId
+    private String id;                 // MongoDB의 _id (String)
+    private Integer requestId;            // 요청 ID
     private Integer step;                // 처리된 단계
     private Long approverId;             // 승인자 ID
     private String approverName;         // 승인자 이름

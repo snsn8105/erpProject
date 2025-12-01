@@ -41,7 +41,8 @@ public class ApprovalProcessingService {
             
             // 2. 승인 요청 생성
             ApprovalRequest approvalRequest = ApprovalRequest.builder()
-                    .requestId(message.getRequestId())  // MongoDB ObjectId 저장
+                    .id(message.getId())  // MongoDB ObjectId 저장
+                    .requestId(message.getRequestId())
                     .requesterId(message.getRequesterId())
                     .title(message.getTitle())
                     .content(message.getContent())
@@ -110,7 +111,7 @@ public class ApprovalProcessingService {
     /**
      * 승인 처리 (REST API: POST /process/{approverId}/{requestId})
      */
-    public ReturnApprovalResult processApproval(Long approverId, String requestId, ProcessApprovalRequest request) {
+    public ReturnApprovalResult processApproval(Long approverId, Integer requestId, ProcessApprovalRequest request) {
         log.info("승인 처리 시작: approverId={}, requestId={}, status={}", 
                 approverId, requestId, request.getStatus());
         

@@ -17,8 +17,8 @@ import lombok.Setter;
 @Builder
 public class ApprovalRequest {
     
-    private Long id;
-    private String requestId;  // MongoDB의 approvalId와 매핑
+    private String id; // MongoDB의 approvalId와 매핑
+    private Integer requestId;  
     private Long requesterId;
     private String title;
     private String content;

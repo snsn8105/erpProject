@@ -13,8 +13,8 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class ApprovalDetailResponse {
-    private Long id;                     // RDB(MySQL)의 ID (혹은 MongoDB ID와 매핑 필요 시 String 변경 고려)
-    private String requestId;            // MongoDB ID
+    private String id;                     // MongoDB의 _id (String)
+    private Integer requestId;            // 요청 ID
     private Long requesterId;
     private String title;
     private String content;

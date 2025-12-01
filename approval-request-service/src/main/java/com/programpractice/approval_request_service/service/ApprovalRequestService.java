@@ -99,7 +99,8 @@ public class ApprovalRequestService {
                     .collect(Collectors.toList());
 
             ApprovalRequestMessage message = ApprovalRequestMessage.builder()
-                    .requestId(approvalRequest.getId())
+                    .id(approvalRequest.getId())
+                    .requestId(approvalRequest.getRequestId())
                     .requesterId(approvalRequest.getRequesterId().longValue())
                     .requesterName("Requester_" + approvalRequest.getRequesterId())
                     .title(approvalRequest.getTitle())

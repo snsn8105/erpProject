@@ -21,17 +21,14 @@ import com.programpractice.approval_processing_service.model.ApprovalStatus;
 public class InMemoryApprovalRepository {
     
     // Thread-Safe한 Map, Long 사용
-    private final Map<String, ApprovalRequest> requestIdMap = new ConcurrentHashMap<>();
-    private final Map<Long, ApprovalRequest> idMap = new ConcurrentHashMap<>();
+    private final Map<Integer, ApprovalRequest> requestIdMap = new ConcurrentHashMap<>();
+    private final Map<Long, ApprovalRequest> idMap = new ConcurrentHashMap<>(); // requesterId 매핑용
     private final AtomicLong idGenerator = new AtomicLong(1);
     private final AtomicLong stepIdGenerator = new AtomicLong(1);
 
     public ApprovalRequest save(ApprovalRequest request) {
         if (request.getId() == null) {
-            // 신규 저장
-            Long newId = idGenerator.getAndIncrement();
-            request.setId(newId);
-
+            
             //Step ID 생성
             request.getSteps().forEach(step -> {
                 if (step.getId() == null) {
@@ -41,21 +38,21 @@ public class InMemoryApprovalRepository {
         }
 
         requestIdMap.put(request.getRequestId(), request);
-        idMap.put(request.getId(), request);
+        idMap.put(request.getRequesterId(), request);
     
         log.debug("승인 요청 저장: id={}, requestId={}", request.getId(), request.getRequestId());
         return request;
     }
 
     // requestId로 조회
-    public Optional<ApprovalRequest> findByRequestId(String requestId) {
+    public Optional<ApprovalRequest> findByRequestId(Integer requestId) {
         ApprovalRequest request = requestIdMap.get(requestId);
         return Optional.ofNullable(request);
     }
     
     // ID로 조회
-    public Optional<ApprovalRequest> findById(Long id) {
-        ApprovalRequest request = idMap.get(id);
+    public Optional<ApprovalRequest> findById(Long requesterId) {
+        ApprovalRequest request = idMap.get(requesterId);
         return Optional.ofNullable(request);
     }
     
@@ -77,7 +74,7 @@ public class InMemoryApprovalRepository {
     
     // 존재 여부 확인
     
-    public boolean existsByRequestId(String requestId) {
+    public boolean existsByRequestId(Integer requestId) {
         return requestIdMap.containsKey(requestId);
     }
     
@@ -85,7 +82,7 @@ public class InMemoryApprovalRepository {
     
     public void delete(ApprovalRequest request) {
         requestIdMap.remove(request.getRequestId());
-        idMap.remove(request.getId());
+        idMap.remove(request.getRequesterId());
         log.debug("승인 요청 삭제: id={}, requestId={}", request.getId(), request.getRequestId());
     }
     

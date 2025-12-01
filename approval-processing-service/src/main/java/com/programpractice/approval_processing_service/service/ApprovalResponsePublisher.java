@@ -22,12 +22,13 @@ public class ApprovalResponsePublisher {
     public void publishApprovalResult(ApprovalResponseMessage message) {
         try {
             log.info("=== 승인 처리 결과 발행 시작 ===");
-            log.info("requestId: {}", message.getRequestId());
-            log.info("step: {}", message.getStep());
-            log.info("approverId: {}", message.getApproverId());
-            log.info("status: {}", message.getStatus());
-            log.info("Exchange: {}", RabbitMQConfig.APPROVAL_EXCHANGE);
-            log.info("RoutingKey: {}", RabbitMQConfig.APPROVAL_RESPONSE_ROUTING_KEY);
+            log.info("발행할 메시지: {}", message);
+            // log.info("requestId: {}", message.getRequestId());
+            // log.info("step: {}", message.getStep());
+            // log.info("approverId: {}", message.getApproverId());
+            // log.info("status: {}", message.getStatus());
+            // log.info("Exchange: {}", RabbitMQConfig.APPROVAL_EXCHANGE);
+            // log.info("RoutingKey: {}", RabbitMQConfig.APPROVAL_RESPONSE_ROUTING_KEY);
             
             rabbitTemplate.convertAndSend(
                     RabbitMQConfig.APPROVAL_EXCHANGE,

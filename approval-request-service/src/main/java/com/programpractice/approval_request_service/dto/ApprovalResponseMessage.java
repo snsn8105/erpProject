@@ -19,8 +19,8 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class ApprovalResponseMessage implements Serializable {
-    
-    private String requestId;            // MongoDB ObjectId
+    private String id;                  // MongoDB ObjectId
+    private Integer requestId;           // 자동 증가 ID
     private Integer step;                // 처리된 단계
     private Long approverId;             // 승인자 ID
     private String approverName;         // 승인자 이름

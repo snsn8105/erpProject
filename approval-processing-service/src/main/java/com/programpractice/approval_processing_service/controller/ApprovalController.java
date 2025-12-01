@@ -47,7 +47,7 @@ public class ApprovalController {
     @PostMapping("/{approverId}/{requestId}")
     public ResponseEntity<ApprovalResponseDto> processApproval(
             @PathVariable Long approverId,
-            @PathVariable String requestId,
+            @PathVariable Integer requestId,
             @Valid @RequestBody ProcessApprovalRequest request) {
         
         log.info("POST /process/{}/{} 호출", approverId, requestId);
@@ -61,10 +61,9 @@ public class ApprovalController {
             
             // 2. RabbitMQ로 결과 발행
             ApprovalResponseMessage message = ApprovalResponseMessage.builder()
-                    .requestId(requestId)
                     .step(result.getStep())
                     .approverId(result.getApproverId())
-                    .status(result.getStatus())
+                    .status(request.getStatus())
                     .finalStatus(result.getStatus())
                     .comment(request.getComment())
                     .updatedAt(result.getUpdatedAt())

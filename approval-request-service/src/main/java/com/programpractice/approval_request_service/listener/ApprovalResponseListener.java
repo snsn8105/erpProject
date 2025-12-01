@@ -40,7 +40,7 @@ public class ApprovalResponseListener {
             }
             
             // MongoDB 문서 조회
-            ApprovalRequest approvalRequest = approvalRequestRepository.findById(message.getRequestId())
+            ApprovalRequest approvalRequest = approvalRequestRepository.findByRequestId(message.getRequestId())
                     .orElseThrow(() -> new IllegalArgumentException(
                             "승인 요청을 찾을 수 없습니다: " + message.getRequestId()));
             
