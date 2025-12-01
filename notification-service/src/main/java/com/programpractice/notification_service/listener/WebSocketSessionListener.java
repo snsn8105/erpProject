@@ -1,5 +1,7 @@
 package com.programpractice.notification_service.listener;
 
+import java.util.Map;
+
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Component;
@@ -62,8 +64,10 @@ public class WebSocketSessionListener {
     
     // STOMP 헤더에서 employeeId 추출
     private String extractEmployeeId(StompHeaderAccessor headerAccessor) {
-        // CONNECT 프레임의 헤더에서 employeeId 추출
-        // 클라이언트가 연결 시 헤더에 employeeId를 포함시켜야 함
-        return headerAccessor.getFirstNativeHeader("employeeId");
+        Map<String, Object> sessionAttributes = headerAccessor.getSessionAttributes();
+        if (sessionAttributes == null) return null;
+
+        // 2. 세션 속성에서 꺼냄
+        return (String) sessionAttributes.get("employeeId");
     }   
 }

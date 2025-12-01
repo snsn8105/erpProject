@@ -1,3 +1,30 @@
 spring:
   application:
     name: notification-service
+  
+  # RabbitMQ 설정
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: admin
+    password: admin123
+    listener:
+      simple:
+        acknowledge-mode: auto
+        concurrency: 3
+        max-concurrency: 10
+        retry:
+          enabled: true
+          initial-interval: 1000
+          max-attempts: 3
+          multiplier: 2.0
+
+server:
+  port: 8084
+
+logging:
+  level:
+    com.programpractice.notification_service: DEBUG
+    org.springframework.amqp: DEBUG
+    org.springframework.messaging: DEBUG
+    org.springframework.web.socket: DEBUG
