@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Repository;
@@ -20,22 +19,11 @@ import com.programpractice.approval_processing_service.model.ApprovalStatus;
 @Slf4j
 public class InMemoryApprovalRepository {
     
-    // Thread-Safe한 Map, Long 사용
+    // Thread-Safe한 Map 사용
     private final Map<Integer, ApprovalRequest> requestIdMap = new ConcurrentHashMap<>();
     private final Map<Long, ApprovalRequest> idMap = new ConcurrentHashMap<>(); // requesterId 매핑용
-    private final AtomicLong idGenerator = new AtomicLong(1);
-    private final AtomicLong stepIdGenerator = new AtomicLong(1);
 
     public ApprovalRequest save(ApprovalRequest request) {
-        if (request.getId() == null) {
-            
-            //Step ID 생성
-            request.getSteps().forEach(step -> {
-                if (step.getId() == null) {
-                    step.setId(stepIdGenerator.getAndIncrement());
-                }
-            });
-        }
 
         requestIdMap.put(request.getRequestId(), request);
         idMap.put(request.getRequesterId(), request);

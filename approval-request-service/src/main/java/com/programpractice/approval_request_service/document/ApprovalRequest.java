@@ -1,11 +1,16 @@
+// approval-request-service/src/main/java/com/programpractice/approval_request_service/document/ApprovalRequest.java
 package com.programpractice.approval_request_service.document;
-
-import lombok.*;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 import java.util.List;
+
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Document(collection = "approval_requests")
 @Getter
@@ -22,10 +27,39 @@ public class ApprovalRequest {
     private String title;
     private String content;
     private List<Step> steps;
+    
+    @Builder.Default
+    private Integer currentStepOrder = 1;  // 현재 진행 중인 단계 (1부터 시작)
+    
     private String finalStatus;  // in_progress, approved, rejected
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     
+    
+    // 현재 단계 가져오기 (O(1) 접근)
+    public Step getCurrentStep() {
+        if (!"in_progress".equals(this.finalStatus)) {
+            return null; // 이미 끝나거나 반려된 건
+        }
+        
+        int index = this.currentStepOrder - 1; // 리스트 인덱스는 0부터 시작
+        
+        if (index >= 0 && index < steps.size()) {
+            return steps.get(index);
+        }
+        return null;
+    }
+    
+    // 다음 단계로 이동
+    public void moveToNextStep() {
+        this.currentStepOrder++;
+        this.updatedAt = LocalDateTime.now();
+    }
+    
+    // 마지막 단계인지 확인
+    public boolean isLastStep() {
+        return this.currentStepOrder >= steps.size();
+    }
     
     // 특정 단계의 상태 업데이트
     public void updateStepStatus(int stepNumber, String status) {
@@ -36,26 +70,12 @@ public class ApprovalRequest {
                 .ifPresent(s -> s.updateStatus(status));
     }
     
-    
     // 최종 상태 업데이트
     public void updateFinalStatus(String status) {
         this.finalStatus = status;
         this.updatedAt = LocalDateTime.now();
     }
     
-    
-    // 다음 pending 단계 찾기
-    public Step getNextPendingStep() {
-        return steps.stream()
-                .filter(s -> "pending".equals(s.getStatus()))
-                .findFirst()
-                .orElse(null);
-    }
-    
-    
-    // 모든 단계가 승인되었는지 확인
-    public boolean areAllStepsApproved() {
-        return steps.stream()
-                .allMatch(s -> "approved".equals(s.getStatus()));
-    }
+    // ❌ 제거: getNextPendingStep() - 더 이상 필요 없음
+    // ❌ 제거: areAllStepsApproved() - isLastStep()으로 대체
 }

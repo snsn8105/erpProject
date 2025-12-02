@@ -1,8 +1,10 @@
+// approval-processing-service/src/main/java/com/programpractice/approval_processing_service/service/ApprovalProcessingService.java
 package com.programpractice.approval_processing_service.service;
 
 import com.programpractice.approval_processing_service.dto.*;
 import com.programpractice.approval_processing_service.model.ApprovalRequest;
 import com.programpractice.approval_processing_service.model.ApprovalStep;
+import com.programpractice.approval_processing_service.model.ApprovalStatus;
 import com.programpractice.approval_processing_service.repository.InMemoryApprovalRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -10,13 +12,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * 승인 처리 서비스
- */
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -28,10 +26,8 @@ public class ApprovalProcessingService {
     
     /**
      * 승인 요청 초기 처리 (RabbitMQ 메시지 수신 시)
-     * - DB에 승인 요청 저장
-     * - 승인 단계 생성 (예: 2단계 승인)
      */
-    public ApprovalResponseMessage processApprovalRequest(ApprovalRequestMessage message) {
+    public ApprovalRequest processApprovalRequest(ApprovalRequestMessage message) {
         log.info("승인 요청 처리 시작: requestId={}, requesterId={}", 
                 message.getRequestId(), message.getRequesterId());
         
@@ -41,65 +37,44 @@ public class ApprovalProcessingService {
             
             // 2. 승인 요청 생성
             ApprovalRequest approvalRequest = ApprovalRequest.builder()
-                    .id(message.getId())  // MongoDB ObjectId 저장
+                    .id(message.getId())
                     .requestId(message.getRequestId())
                     .requesterId(message.getRequesterId())
                     .title(message.getTitle())
                     .content(message.getContent())
+                    .currentStepOrder(1)  // 초기값 설정
                     .build();
             
-            // 3. 승인 단계 생성 (예시: 2단계 승인)
+            // 3. 승인 단계 생성
             createApprovalSteps(approvalRequest, message.getSteps());
             
             // 4. 저장
             ApprovalRequest saved = approvalRequestRepository.save(approvalRequest);
             log.info("승인 요청 저장 완료: id={}, requestId={}", saved.getId(), saved.getRequestId());
             
-            // 5. 첫 번째 승인자 정보 가져오기
-            ApprovalStep firstStep = saved.getSteps().get(0);
-            
-            // 6. 응답 메시지 생성
-            ApprovalResponseMessage response = ApprovalResponseMessage.builder()
-                    .requestId(message.getRequestId())
-                    .status("pending")
-                    .approverId(firstStep.getApproverId())
-                    .approverName("Approver_" + firstStep.getApproverId())
-                    .comment("승인 요청이 등록되었습니다")
-                    .processedAt(LocalDateTime.now())
-                    .success(true)
-                    .build();
-            
-            log.info("승인 요청 처리 완료: requestId={}", message.getRequestId());
-            return response;
+            return saved;
             
         } catch (Exception e) {
             log.error("승인 요청 처리 실패: requestId={}", message.getRequestId(), e);
-            
-            return ApprovalResponseMessage.builder()
-                    .requestId(message.getRequestId())
-                    .success(false)
-                    .errorMessage(e.getMessage())
-                    .processedAt(LocalDateTime.now())
-                    .build();
+            throw new RuntimeException("승인 요청 처리 실패", e);
         }
     }
     
     /**
-     * 승인 단계 생성 (입력받은 정보 기반)
+     * 승인 단계 생성
      */
-    private void createApprovalSteps(ApprovalRequest approvalRequest, List<ApprovalRequestMessage.ApprovalStepDto> stepRequests) {
+    private void createApprovalSteps(ApprovalRequest approvalRequest, 
+                                     List<ApprovalRequestMessage.ApprovalStepDto> stepRequests) {
         
-        // 유효성 검사: 단계 정보가 없으면 예외 처리
         if (stepRequests == null || stepRequests.isEmpty()) {
             throw new IllegalArgumentException("승인 단계 정보가 비어있습니다.");
         }
 
-        // 입력받은 리스트를 순회하며 Entity 생성
         for (ApprovalRequestMessage.ApprovalStepDto stepReq : stepRequests) {
             ApprovalStep step = ApprovalStep.builder()
                     .step(stepReq.getStep())
                     .approverId(stepReq.getApproverId())
-                    .status(com.programpractice.approval_processing_service.model.ApprovalStatus.PENDING) // 초기 상태
+                    .status(ApprovalStatus.PENDING)
                     .build();
             
             approvalRequest.addStep(step);
@@ -111,7 +86,8 @@ public class ApprovalProcessingService {
     /**
      * 승인 처리 (REST API: POST /process/{approverId}/{requestId})
      */
-    public ReturnApprovalResult processApproval(Long approverId, Integer requestId, ProcessApprovalRequest request) {
+    public ApprovalRequest processApproval(Long approverId, Integer requestId, 
+                                               ProcessApprovalRequest request) {
         log.info("승인 처리 시작: approverId={}, requestId={}, status={}", 
                 approverId, requestId, request.getStatus());
         
@@ -119,8 +95,8 @@ public class ApprovalProcessingService {
         ApprovalRequest approvalRequest = approvalRequestRepository.findByRequestId(requestId)
                 .orElseThrow(() -> new IllegalArgumentException("승인 요청을 찾을 수 없습니다: " + requestId));
         
-        // 2. 다음 PENDING 단계 찾기
-        ApprovalStep currentStep = approvalRequest.getNextPendingStep();
+        // 2. 현재 단계 가져오기 (O(1) 접근 - stream 불필요!)
+        ApprovalStep currentStep = approvalRequest.getCurrentStep();
         if (currentStep == null) {
             throw new IllegalStateException("처리할 승인 단계가 없습니다");
         }
@@ -135,21 +111,21 @@ public class ApprovalProcessingService {
             currentStep.approve(request.getComment());
             log.info("단계 승인 완료: step={}", currentStep.getStep());
             
-            // 5. 다음 단계 확인
-            ApprovalStep nextStep = approvalRequest.getNextPendingStep();
-            if (nextStep == null) {
+            // 5. 마지막 단계인지 확인
+            if (approvalRequest.isLastStep()) {
                 // 모든 단계 승인 완료
-                approvalRequest.updateFinalStatus(
-                    com.programpractice.approval_processing_service.model.ApprovalStatus.APPROVED
-                );
+                approvalRequest.updateFinalStatus(ApprovalStatus.APPROVED);
                 log.info("최종 승인 완료: requestId={}", requestId);
+            } else {
+                // 다음 단계로 포인터 이동
+                approvalRequest.moveToNextStep();
+                log.info("다음 단계로 이동: currentStepOrder={}", 
+                        approvalRequest.getCurrentStepOrder());
             }
             
         } else if ("rejected".equalsIgnoreCase(request.getStatus())) {
             currentStep.reject(request.getComment());
-            approvalRequest.updateFinalStatus(
-                com.programpractice.approval_processing_service.model.ApprovalStatus.REJECTED
-            );
+            approvalRequest.updateFinalStatus(ApprovalStatus.REJECTED);
             log.info("승인 반려: step={}", currentStep.getStep());
         } else {
             throw new IllegalArgumentException("잘못된 상태값입니다: " + request.getStatus());
@@ -159,16 +135,11 @@ public class ApprovalProcessingService {
         approvalRequestRepository.save(approvalRequest);
         
         // 7. 결과 반환
-        return ReturnApprovalResult.builder()
-                .step(currentStep.getStep())
-                .approverId(currentStep.getApproverId())
-                .status(currentStep.getStatus().name().toLowerCase())
-                .updatedAt(currentStep.getProcessedAt())
-                .build();
+        return approvalRequest;
     }
     
     /**
-     * 승인 요청 상세 조회 (REST API: GET /process/{approverId})
+     * 승인 요청 상세 조회
      */
     @Transactional(readOnly = true)
     public List<ApprovalDetailResponse> getApprovalsByApproverId(Long approverId) {

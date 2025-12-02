@@ -3,14 +3,18 @@ package com.programpractice.approval_processing_service.controller;
 import com.programpractice.approval_processing_service.dto.*;
 import com.programpractice.approval_processing_service.service.ApprovalResponsePublisher;
 import com.programpractice.approval_processing_service.service.ApprovalProcessingService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+
+import com.programpractice.approval_processing_service.model.ApprovalRequest;
 
 /**
  * 승인 처리 REST API Controller
@@ -55,23 +59,12 @@ public class ApprovalController {
         
         try {
             // 1. 승인 처리
-            ReturnApprovalResult result = processingService.processApproval(approverId, requestId, request);
+            ApprovalRequest result = processingService.processApproval(approverId, requestId, request);
             
-            log.info("승인 처리 완료: step={}, status={}", result.getStep(), result.getStatus());
+            log.info("승인 처리 완료: step={}, status={}", result.getCurrentStep().getStep(), result.getCurrentStep().getStatus());
             
-            // 2. RabbitMQ로 결과 발행
-            ApprovalResponseMessage message = ApprovalResponseMessage.builder()
-                    .step(result.getStep())
-                    .approverId(result.getApproverId())
-                    .status(request.getStatus())
-                    .finalStatus(result.getStatus())
-                    .comment(request.getComment())
-                    .updatedAt(result.getUpdatedAt())
-                    .processedAt(LocalDateTime.now())
-                    .success(true)
-                    .build();
-            
-            responsePublisher.publishApprovalResult(message);
+            // 2. RabbitMQ로 결과 발행            
+            responsePublisher.publishApprovalResult(result);
             
             // 3. 클라이언트에 "received" 응답 반환
             ApprovalResponseDto response = ApprovalResponseDto.builder()
