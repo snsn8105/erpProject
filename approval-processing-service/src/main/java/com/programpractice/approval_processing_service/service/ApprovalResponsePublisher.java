@@ -1,6 +1,6 @@
+// approval-processing-service/src/main/java/com/programpractice/approval_processing_service/service/ApprovalResponsePublisher.java
 package com.programpractice.approval_processing_service.service;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -24,54 +24,93 @@ public class ApprovalResponsePublisher {
     
     /**
      * 승인 처리 결과 발행
-     * 1. 진행 중 (PENDING): 다음 단계 승인자에게 알림 (RequestMessage 발행)
-     * 2. 종료 (APPROVED/REJECTED): 최종 결과 알림 (ResponseMessage 발행)
+     * 
+     * 분기 로직:
+     * 1. finalStatus가 PENDING (진행 중): 다음 단계 승인자에게 RequestMessage 발행
+     * 2. finalStatus가 APPROVED/REJECTED (종료): 최종 결과 ResponseMessage 발행
      */
     public void publishApprovalResult(ApprovalRequest approvalRequest) {
-        // 메시지 객체를 try 블록 밖으로 빼서 예외 발생 시 로깅 가능하게 함 (단, 타입이 갈리므로 Object나 공통 인터페이스 사용 고려)
-        Object payload;
-        String routingKey;
-
         try {
-            log.info("=== 승인 처리 결과 발행 시작 ===");
-            log.info("Request ID: {}, Status: {}", approvalRequest.getRequestId(), approvalRequest.getFinalStatus());
+            log.info("=== 메시지 발행 시작 ===");
+            log.info("requestId={}, finalStatus={}, currentStep={}/{}", 
+                    approvalRequest.getRequestId(),
+                    approvalRequest.getFinalStatus(),
+                    approvalRequest.getCurrentStepOrder(),
+                    approvalRequest.getSteps().size());
 
-            // 분기 로직: 전체 상태가 PENDING이면 아직 단계가 남은 것
+            // 분기: PENDING이면 다음 단계 진행, 아니면 최종 결과 통보
             if (approvalRequest.getFinalStatus() == ApprovalStatus.PENDING) {
-                // [Case 1] 다음 단계 진행 -> RequestMessage 발행
-                routingKey = RabbitMQConfig.APPROVAL_REQUEST_ROUTING_KEY; // 주의: 다음 단계 승인자가 들을 키
-                payload = createRequestMessage(approvalRequest);
                 
-                log.info(">> 다음 단계 진행을 위해 Request 메시지 발행");
-
+                // [Case 1] 다음 단계 진행
+                publishNextStepRequest(approvalRequest);
+                
             } else {
-                // [Case 2] 최종 승인 또는 반려 -> ResponseMessage 발행
-                // TODO: 반려 시 즉시 종료 로직 추가 필요
-                routingKey = RabbitMQConfig.APPROVAL_RESPONSE_ROUTING_KEY; // 최종 결과를 들을 키
-                payload = createResponseMessage(approvalRequest);
                 
-                log.info(">> 최종 결과({}) 통보를 위해 Response 메시지 발행", approvalRequest.getFinalStatus());
+                // [Case 2] 최종 승인/반려 결과 통보
+                publishFinalResult(approvalRequest);
             }
-
-            // 실제 발행
-            rabbitTemplate.convertAndSend(
-                    RabbitMQConfig.APPROVAL_EXCHANGE,
-                    routingKey,
-                    payload
-            );
-            
-            log.info("=== 발행 완료 (RoutingKey: {}) ===", routingKey);
             
         } catch (Exception e) {
             log.error("=== 메시지 발행 실패 ===", e);
-            log.error("Target RequestId: {}", approvalRequest.getRequestId());
+            log.error("requestId={}", approvalRequest.getRequestId());
             throw new RuntimeException("메시지 발행 실패", e);
         }
     }
 
-    // --- Private Helper Methods (메시지 생성 로직 분리) ---
+    /**
+     * 다음 단계 요청 메시지 발행
+     */
+    private void publishNextStepRequest(ApprovalRequest request) {
+        log.info("➡️ 다음 단계 진행을 위한 RequestMessage 발행");
+        
+        ApprovalRequestMessage message = createRequestMessage(request);
+        
+        log.info("발행 대상: Exchange={}, RoutingKey={}", 
+                RabbitMQConfig.APPROVAL_EXCHANGE,
+                RabbitMQConfig.APPROVAL_REQUEST_ROUTING_KEY);
+        
+        if (request.getCurrentStep() != null) {
+            log.info("다음 승인 대기자: approverId={}, step={}", 
+                    request.getCurrentStep().getApproverId(),
+                    request.getCurrentStep().getStep());
+        }
+        
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.APPROVAL_EXCHANGE,
+                RabbitMQConfig.APPROVAL_REQUEST_ROUTING_KEY,
+                message
+        );
+        
+        log.info("✅ RequestMessage 발행 완료");
+    }
 
-    // 다음 단계 요청 메시지 생성
+    /**
+     * 최종 결과 메시지 발행
+     */
+    private void publishFinalResult(ApprovalRequest request) {
+        log.info("🏁 최종 결과({}) 통보를 위한 ResponseMessage 발행", 
+                request.getFinalStatus());
+        
+        ApprovalResponseMessage message = createResponseMessage(request);
+        
+        log.info("발행 대상: Exchange={}, RoutingKey={}", 
+                RabbitMQConfig.APPROVAL_EXCHANGE,
+                RabbitMQConfig.APPROVAL_RESPONSE_ROUTING_KEY);
+        
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.APPROVAL_EXCHANGE,
+                RabbitMQConfig.APPROVAL_RESPONSE_ROUTING_KEY,
+                message
+        );
+        
+        log.info("✅ ResponseMessage 발행 완료: finalStatus={}", message.getFinalStatus());
+    }
+
+    // --- Private Helper Methods ---
+
+    /**
+     * 다음 단계 요청 메시지 생성
+     */
     private ApprovalRequestMessage createRequestMessage(ApprovalRequest request) {
         return ApprovalRequestMessage.builder()
                 .id(request.getId())
@@ -79,37 +118,32 @@ public class ApprovalResponsePublisher {
                 .requesterId(request.getRequesterId())
                 .title(request.getTitle())
                 .content(request.getContent())
-                
-                // [핵심 변경] DTO의 모든 필드를 매핑합니다.
                 .steps(request.getSteps().stream()
                     .map(step -> ApprovalRequestMessage.ApprovalStepDto.builder()
                         .step(step.getStep())
                         .approverId(step.getApproverId())
-                        
-                        // 1. Enum(Entity) -> String(DTO) 변환
-                        // status가 null이 아님을 보장하거나 null safe하게 처리해야 함
                         .status(step.getStatus() != null ? step.getStatus().name() : null)
-                        
-                        // 2. 코멘트 전달 (null일 수 있음)
                         .comment(step.getComment())
-                        
-                        // 3. 처리 시간 전달 (null일 수 있음)
                         .processedAt(step.getProcessedAt())
-                        
                         .build())
                     .toList())
-                
                 .requestedAt(request.getCreatedAt())
                 .build();
     }
 
-    // 최종 결과 메시지 생성
+    /**
+     * 최종 결과 메시지 생성
+     */
     private ApprovalResponseMessage createResponseMessage(ApprovalRequest request) {
         return ApprovalResponseMessage.builder()
+                .id(request.getId())
                 .requestId(request.getRequestId())
-                .finalStatus(request.getFinalStatus().name()) // APPROVED or REJECTED
+                .requesterId(request.getRequesterId().intValue())
+                .title(request.getTitle())
+                .finalStatus(request.getFinalStatus().name())
                 .updatedAt(LocalDateTime.now())
-                .processedAt(request.getUpdatedAt()) // 최종 업데이트 시간
+                .processedAt(request.getUpdatedAt())
+                .success(true)
                 .build();
     }
 }
