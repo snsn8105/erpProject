@@ -7,6 +7,17 @@
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
     <style>
+        :root {
+            --primary-color: #2563eb; /* 차분한 블루 */
+            --danger-color: #dc2626;  /* 차분한 레드 */
+            --success-color: #16a34a; /* 차분한 그린 */
+            --text-main: #1f2937;
+            --text-sub: #6b7280;
+            --bg-body: #f3f4f6;
+            --bg-card: #ffffff;
+            --border-color: #e5e7eb;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -14,50 +25,57 @@
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
             min-height: 100vh;
-            padding: 20px;
+            padding: 40px 20px;
+            line-height: 1.5;
         }
         
         .container {
-            max-width: 1000px;
+            max-width: 900px;
             margin: 0 auto;
         }
         
+        /* Header */
         .header {
-            text-align: center;
-            color: white;
             margin-bottom: 30px;
+            text-align: left;
         }
         
         .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 5px;
         }
         
         .header p {
-            font-size: 1.1em;
-            opacity: 0.9;
+            font-size: 1rem;
+            color: var(--text-sub);
         }
         
+        /* Cards */
         .card {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
         
         .card h2 {
-            color: #667eea;
+            font-size: 1.25rem;
+            font-weight: 600;
             margin-bottom: 20px;
-            font-size: 1.5em;
-            border-bottom: 2px solid #667eea;
-            padding-bottom: 10px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-main);
         }
         
+        /* Inputs */
         .input-group {
             margin-bottom: 20px;
         }
@@ -65,289 +83,262 @@
         .input-group label {
             display: block;
             margin-bottom: 8px;
-            color: #333;
-            font-weight: 600;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-main);
         }
         
         .input-group input {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.95rem;
+            background-color: #f9fafb;
+            transition: border-color 0.2s;
         }
         
         .input-group input:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: var(--primary-color);
+            background-color: #fff;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
         
+        /* Buttons */
         .button-group {
             display: flex;
-            gap: 10px;
+            gap: 12px;
             flex-wrap: wrap;
         }
         
         button {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
+            padding: 10px 20px;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
             cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        
-        button:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: all 0.2s;
         }
         
         button:disabled {
-            opacity: 0.5;
+            opacity: 0.6;
             cursor: not-allowed;
+            background-color: #e5e7eb !important;
+            color: #9ca3af !important;
+            border-color: transparent !important;
         }
         
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-color: var(--primary-color);
             color: white;
         }
+        .btn-primary:hover:not(:disabled) { background-color: #1d4ed8; }
         
         .btn-danger {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
+            background-color: #fff;
+            border-color: var(--danger-color);
+            color: var(--danger-color);
         }
+        .btn-danger:hover:not(:disabled) { background-color: #fef2f2; }
         
-        .btn-success {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
+        .btn-secondary { /* 기존 Info/Success 대체 */
+            background-color: #fff;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
         }
-        
-        .btn-info {
-            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-            color: white;
-        }
-        
-        .status {
-            padding: 15px;
-            border-radius: 8px;
+        .btn-secondary:hover:not(:disabled) { background-color: #f3f4f6; }
+
+        /* Status Box */
+        .status-box {
             margin-top: 15px;
-            font-weight: 600;
-            text-align: center;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         
-        .status.connected {
-            background: #d4edda;
-            color: #155724;
-            border: 2px solid #c3e6cb;
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
         }
-        
-        .status.disconnected {
-            background: #f8d7da;
-            color: #721c24;
-            border: 2px solid #f5c6cb;
+
+        .status-connected {
+            background-color: #f0fdf4;
+            color: #166534;
+            border: 1px solid #bbf7d0;
         }
+        .status-connected .status-dot { background-color: #16a34a; }
+
+        .status-disconnected {
+            background-color: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+        .status-disconnected .status-dot { background-color: #dc2626; }
         
+        /* Notification List */
         .notification-list {
             max-height: 500px;
             overflow-y: auto;
-            padding-right: 10px;
-        }
-        
-        .notification-list::-webkit-scrollbar {
-            width: 8px;
-        }
-        
-        .notification-list::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-        }
-        
-        .notification-list::-webkit-scrollbar-thumb {
-            background: #667eea;
-            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: #f9fafb;
+            padding: 10px;
         }
         
         .notification-item {
-            background: linear-gradient(135deg, #fff5e6 0%, #ffe5cc 100%);
-            border-left: 4px solid #ff9800;
-            padding: 15px;
-            margin-bottom: 15px;
-            border-radius: 8px;
-            animation: slideIn 0.3s ease-out;
-        }
-        
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateX(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-        
-        .notification-item .title {
-            font-weight: 700;
-            color: #e65100;
+            background: white;
+            border: 1px solid var(--border-color);
+            padding: 16px;
             margin-bottom: 10px;
-            font-size: 1.1em;
+            border-radius: 6px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
         
-        .notification-item .content {
-            color: #333;
+        .notification-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 8px;
-            line-height: 1.6;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .notification-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text-main);
+        }
+
+        .notification-time {
+            font-size: 0.8rem;
+            color: var(--text-sub);
         }
         
-        .notification-item .timestamp {
-            color: #666;
-            font-size: 0.85em;
-            font-style: italic;
+        .notification-content p {
+            font-size: 0.9rem;
+            color: var(--text-main);
+            margin-bottom: 4px;
         }
         
         .empty-state {
             text-align: center;
             padding: 40px;
-            color: #999;
+            color: var(--text-sub);
+            font-size: 0.9rem;
         }
         
-        .empty-state svg {
-            width: 80px;
-            height: 80px;
-            margin-bottom: 15px;
-            opacity: 0.5;
-        }
-        
+        /* Badges */
         .badge {
             display: inline-block;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 0.85em;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
             font-weight: 600;
-            margin-right: 8px;
         }
         
-        .badge.approved {
-            background: #d4edda;
-            color: #155724;
-        }
+        .badge.approved { background: #dcfce7; color: #166534; }
+        .badge.rejected { background: #fee2e2; color: #991b1b; }
+        .badge.pending { background: #fef3c7; color: #92400e; }
         
-        .badge.rejected {
-            background: #f8d7da;
-            color: #721c24;
-        }
-        
-        .badge.pending {
-            background: #fff3cd;
-            color: #856404;
-        }
-        
+        /* Stats */
         .stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(3, 1fr);
             gap: 15px;
-            margin-top: 20px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8fafb;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
         }
         
-        .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
+        .stat-item {
             text-align: center;
         }
         
-        .stat-card .number {
-            font-size: 2em;
+        .stat-number {
+            font-size: 1.5rem;
             font-weight: 700;
-            margin-bottom: 5px;
+            color: var(--text-main);
         }
         
-        .stat-card .label {
-            font-size: 0.9em;
-            opacity: 0.9;
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-sub);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
+
+        /* Info Box */
+        .info-box {
+            background-color: #f9fafb;
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+        .info-box p { margin-bottom: 5px; }
+        .info-box p:last-child { margin-bottom: 0; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔔 Notification Service Test</h1>
-            <p>실시간 알림 시스템 테스트 페이지</p>
+            <h1>Notification Service Test</h1>
+            <p>실시간 알림 시스템 모니터링</p>
         </div>
         
-        <!-- 연결 설정 -->
         <div class="card">
-            <h2>📡 연결 설정</h2>
+            <h2>연결 설정</h2>
             <div class="input-group">
                 <label for="employeeId">직원 ID (Employee ID)</label>
-                <input type="number" id="employeeId" placeholder="예: 1" value="1">
+                <input type="number" id="employeeId" placeholder="ID 입력 (예: 1)" value="1">
             </div>
             <div class="button-group">
-                <button class="btn-primary" id="connectBtn" onclick="connect()">
-                    🔌 연결하기
-                </button>
-                <button class="btn-danger" id="disconnectBtn" onclick="disconnect()" disabled>
-                    🔌 연결 해제
-                </button>
+                <button class="btn-primary" id="connectBtn" onclick="connect()">연결</button>
+                <button class="btn-danger" id="disconnectBtn" onclick="disconnect()" disabled>연결 해제</button>
             </div>
-            <div id="status" class="status disconnected">
-                ⚠️ 연결되지 않음
+            <div id="status" class="status-box status-disconnected">
+                <span class="status-dot"></span>
+                <span id="statusText">연결되지 않음</span>
             </div>
         </div>
         
-        <!-- 알림 목록 -->
         <div class="card">
-            <h2>📬 수신한 알림</h2>
-            <div class="button-group">
-                <button class="btn-info" onclick="clearNotifications()">
-                    🗑️ 알림 지우기
-                </button>
-                <button class="btn-success" onclick="sendTestNotification()">
-                    ✉️ 테스트 알림 받기
-                </button>
-            </div>
+            <h2>알림 목록</h2>
+            
             <div class="stats" id="stats" style="display: none;">
-                <div class="stat-card">
-                    <div class="number" id="totalCount">0</div>
-                    <div class="label">총 알림 수</div>
+                <div class="stat-item">
+                    <div class="number stat-number" id="totalCount">0</div>
+                    <div class="label stat-label">Total</div>
                 </div>
-                <div class="stat-card">
-                    <div class="number" id="approvedCount">0</div>
-                    <div class="label">승인됨</div>
+                <div class="stat-item">
+                    <div class="number stat-number" id="approvedCount" style="color: var(--success-color)">0</div>
+                    <div class="label stat-label">Approved</div>
                 </div>
-                <div class="stat-card">
-                    <div class="number" id="rejectedCount">0</div>
-                    <div class="label">반려됨</div>
+                <div class="stat-item">
+                    <div class="number stat-number" id="rejectedCount" style="color: var(--danger-color)">0</div>
+                    <div class="label stat-label">Rejected</div>
                 </div>
             </div>
+
+            <div class="button-group" style="margin-bottom: 15px;">
+                <button class="btn-secondary" onclick="sendTestNotification()">테스트 알림 요청</button>
+                <button class="btn-secondary" onclick="clearNotifications()">목록 초기화</button>
+            </div>
+            
             <div id="notifications" class="notification-list">
                 <div class="empty-state">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                    </svg>
-                    <p>아직 받은 알림이 없습니다</p>
+                    수신된 알림이 없습니다.
                 </div>
             </div>
-        </div>
-        
-        <!-- 상태 확인 -->
-        <div class="card">
-            <h2>🔍 서비스 상태</h2>
-            <div class="button-group">
-                <button class="btn-info" onclick="checkConnectionStatus()">
-                    📊 연결 상태 확인
-                </button>
-                <button class="btn-success" onclick="checkServiceStats()">
-                    📈 서비스 통계 확인
-                </button>
-            </div>
-            <div id="serviceInfo" style="margin-top: 20px;"></div>
         </div>
     </div>
 
@@ -358,80 +349,69 @@
         let approvedCount = 0;
         let rejectedCount = 0;
 
-        // WebSocket 연결
         function connect() {
             employeeId = document.getElementById('employeeId').value;
             
             if (!employeeId) {
-                alert('❌ 직원 ID를 입력하세요.');
+                alert('직원 ID를 입력하세요.');
                 return;
             }
 
             const socket = new SockJS('http://localhost:8084/ws?id=' + employeeId);
             stompClient = Stomp.over(socket);
+            stompClient.debug = null; // 콘솔 로그 최소화
             
             stompClient.connect({}, function(frame) {
-                console.log('✅ Connected: ' + frame);
+                console.log('Connected');
                 updateConnectionStatus(true);
                 
-                // 개인 알림 구독
                 stompClient.subscribe('/topic/notifications/' + employeeId, function(message) {
-                    console.log('📨 Notification received:', message.body);
                     showNotification(JSON.parse(message.body));
                 });
-                
-                console.log('✅ 구독 완료: employeeId=' + employeeId);
             }, function(error) {
-                console.error('❌ Connection error:', error);
+                console.error('Connection error:', error);
                 updateConnectionStatus(false);
-                alert('❌ 연결 실패: ' + error);
+                alert('연결 실패: 서버 상태를 확인해주세요.');
             });
         }
 
-        // WebSocket 연결 해제
         function disconnect() {
             if (stompClient !== null) {
                 stompClient.disconnect(function() {
-                    console.log('🔌 Disconnected');
+                    console.log('Disconnected');
                     updateConnectionStatus(false);
                 });
             }
         }
 
-        // 연결 상태 업데이트
         function updateConnectionStatus(connected) {
             const statusDiv = document.getElementById('status');
+            const statusText = document.getElementById('statusText');
             const connectBtn = document.getElementById('connectBtn');
             const disconnectBtn = document.getElementById('disconnectBtn');
             
             if (connected) {
-                statusDiv.className = 'status connected';
-                statusDiv.innerHTML = '✅ 연결됨 (직원 ID: ' + employeeId + ')';
+                statusDiv.className = 'status-box status-connected';
+                statusText.innerText = '연결됨 (ID: ' + employeeId + ')';
                 connectBtn.disabled = true;
                 disconnectBtn.disabled = false;
             } else {
-                statusDiv.className = 'status disconnected';
-                statusDiv.innerHTML = '⚠️ 연결되지 않음';
+                statusDiv.className = 'status-box status-disconnected';
+                statusText.innerText = '연결되지 않음';
                 connectBtn.disabled = false;
                 disconnectBtn.disabled = true;
             }
         }
 
-        // 알림 표시
         function showNotification(notification) {
             notificationCount++;
             
-            // 통계 업데이트
-            if (notification.finalResult === 'approved') {
-                approvedCount++;
-            } else if (notification.finalResult === 'rejected') {
-                rejectedCount++;
-            }
+            if (notification.finalResult === 'approved') approvedCount++;
+            else if (notification.finalResult === 'rejected') rejectedCount++;
+            
             updateStats();
             
             const notificationsDiv = document.getElementById('notifications');
-            
-            // 첫 알림이면 빈 상태 메시지 제거
             if (notificationCount === 1) {
                 notificationsDiv.innerHTML = '';
                 document.getElementById('stats').style.display = 'grid';
@@ -440,62 +420,46 @@
             const notificationDiv = document.createElement('div');
             notificationDiv.className = 'notification-item';
             
-            let statusBadge = '';
+            let badgeClass = 'pending';
+            let statusText = '진행 중';
+            
             if (notification.finalResult === 'approved') {
-                statusBadge = '<span class="badge approved">✓ 최종 승인</span>';
+                badgeClass = 'approved';
+                statusText = '승인됨';
             } else if (notification.finalResult === 'rejected') {
-                statusBadge = '<span class="badge rejected">✗ 반려됨</span>';
-            } else {
-                statusBadge = '<span class="badge pending">⏳ 진행 중</span>';
+                badgeClass = 'rejected';
+                statusText = '반려됨';
             }
             
-            let html = `
-                <div class="title">
-                    ${statusBadge}
-                    알림 #${notificationCount}
-                </div>
-                <div class="content">
-                    <strong>📋 제목:</strong> ${notification.title || 'N/A'}<br>
-                    <strong>🆔 요청 ID:</strong> ${notification.requestId || 'N/A'}<br>
-                    <strong>📊 현재 상태:</strong> ${notification.result || 'N/A'}<br>
-                    <strong>🎯 최종 결과:</strong> ${notification.finalResult || 'N/A'}<br>
-            `;
+            const timeString = new Date(notification.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             
-            if (notification.rejectedBy) {
-                html += `<strong>👤 반려자 ID:</strong> ${notification.rejectedBy}<br>`;
-            }
-            
-            html += `
-                    <strong>💬 메시지:</strong> ${notification.message || 'N/A'}
+            notificationDiv.innerHTML = `
+                <div class="notification-header">
+                    <span class="notification-title">
+                        <span class="badge ${badgeClass}">${statusText}</span>
+                        ${notification.title || '알림'}
+                    </span>
+                    <span class="notification-time">${timeString}</span>
                 </div>
-                <div class="timestamp">
-                    🕐 ${new Date(notification.timestamp).toLocaleString('ko-KR')}
+                <div class="notification-content">
+                    <p><strong>요청 ID:</strong> ${notification.requestId}</p>
+                    <p><strong>메시지:</strong> ${notification.message || '-'}</p>
+                    ${notification.rejectedBy ? `<p style="color:var(--danger-color)"><strong>반려자 ID:</strong> ${notification.rejectedBy}</p>` : ''}
                 </div>
             `;
             
-            notificationDiv.innerHTML = html;
             notificationsDiv.insertBefore(notificationDiv, notificationsDiv.firstChild);
         }
 
-        // 통계 업데이트
         function updateStats() {
             document.getElementById('totalCount').textContent = notificationCount;
             document.getElementById('approvedCount').textContent = approvedCount;
             document.getElementById('rejectedCount').textContent = rejectedCount;
         }
 
-        // 알림 지우기
         function clearNotifications() {
-            if (confirm('모든 알림을 삭제하시겠습니까?')) {
-                document.getElementById('notifications').innerHTML = `
-                    <div class="empty-state">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                        </svg>
-                        <p>아직 받은 알림이 없습니다</p>
-                    </div>
-                `;
+            if (confirm('알림 목록을 초기화하시겠습니까?')) {
+                document.getElementById('notifications').innerHTML = '<div class="empty-state">수신된 알림이 없습니다.</div>';
                 notificationCount = 0;
                 approvedCount = 0;
                 rejectedCount = 0;
@@ -504,74 +468,16 @@
             }
         }
 
-        // 테스트 알림 전송
         async function sendTestNotification() {
-            if (!employeeId) {
-                alert('❌ 먼저 연결하세요.');
-                return;
-            }
-            
+            if (!employeeId) return alert('먼저 연결하세요.');
             try {
-                const response = await fetch('http://localhost:8084/api/notifications/test/' + employeeId);
-                const result = await response.text();
-                console.log('✅ 테스트 알림 요청:', result);
-                alert('✅ 테스트 알림이 전송되었습니다.');
+                await fetch('http://localhost:8084/api/notifications/test/' + employeeId);
             } catch (error) {
-                console.error('❌ 테스트 알림 전송 실패:', error);
-                alert('❌ 테스트 알림 전송 실패: ' + error);
+                alert('요청 실패');
             }
         }
 
-        // 연결 상태 확인
-        async function checkConnectionStatus() {
-            if (!employeeId) {
-                alert('❌ 먼저 연결하세요.');
-                return;
-            }
-            
-            try {
-                const response = await fetch('http://localhost:8084/api/notifications/status/' + employeeId);
-                const status = await response.json();
-                
-                const infoDiv = document.getElementById('serviceInfo');
-                infoDiv.innerHTML = `
-                    <div class="card" style="background: #f8f9fa; padding: 15px;">
-                        <h3 style="color: #667eea; margin-bottom: 10px;">연결 상태</h3>
-                        <p><strong>직원 ID:</strong> ${status.employeeId}</p>
-                        <p><strong>연결 상태:</strong> ${status.connected ? '✅ 연결됨' : '❌ 연결 안됨'}</p>
-                        <p><strong>세션 수:</strong> ${status.sessionCount}</p>
-                    </div>
-                `;
-            } catch (error) {
-                console.error('❌ 상태 확인 실패:', error);
-                alert('❌ 상태 확인 실패: ' + error);
-            }
-        }
-
-        // 서비스 통계 확인
-        async function checkServiceStats() {
-            try {
-                const response = await fetch('http://localhost:8084/api/notifications/stats');
-                const stats = await response.json();
-                
-                const infoDiv = document.getElementById('serviceInfo');
-                infoDiv.innerHTML = `
-                    <div class="card" style="background: #f8f9fa; padding: 15px;">
-                        <h3 style="color: #667eea; margin-bottom: 10px;">서비스 통계</h3>
-                        <p><strong>연결된 사용자 수:</strong> ${stats.connectedUsers}</p>
-                        <p><strong>총 세션 수:</strong> ${stats.totalSessions}</p>
-                    </div>
-                `;
-            } catch (error) {
-                console.error('❌ 통계 조회 실패:', error);
-                alert('❌ 통계 조회 실패: ' + error);
-            }
-        }
-
-        // 페이지 언로드 시 연결 해제
-        window.addEventListener('beforeunload', function() {
-            disconnect();
-        });
+        window.addEventListener('beforeunload', () => disconnect());
     </script>
 </body>
 </html>
