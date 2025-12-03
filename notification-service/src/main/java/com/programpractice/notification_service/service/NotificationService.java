@@ -41,7 +41,7 @@ public class NotificationService {
         }
 
         // /topic/notifications/{employeeID}로 메시지 발행
-        String destination = "/topic/notifications" + employeeId;
+        String destination = "/topic/notifications/" + employeeId;
         messagingTemplate.convertAndSend(destination, notificationMessage);
 
         log.info("WebSocket 알림 전송: destination={}, employeeId={}, message={}", 
