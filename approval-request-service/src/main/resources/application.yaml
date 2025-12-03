@@ -39,6 +39,11 @@ employee:
   service:
     url: http://localhost:8081
 
+# Notification Service 연동
+notification:
+  service:
+    url: http://localhost:8084
+
 logging:
   level:
     com.programpractice.approval_request_service: DEBUG

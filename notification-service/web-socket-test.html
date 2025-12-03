@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notification Service 테스트</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+        
+        .btn-info {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            color: white;
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-weight: 600;
+            text-align: center;
+        }
+        
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+        
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+        
+        .notification-list {
+            max-height: 500px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        
+        .notification-list::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .notification-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        .notification-list::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 10px;
+        }
+        
+        .notification-item {
+            background: linear-gradient(135deg, #fff5e6 0%, #ffe5cc 100%);
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .notification-item .title {
+            font-weight: 700;
+            color: #e65100;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        
+        .notification-item .content {
+            color: #333;
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+        
+        .notification-item .timestamp {
+            color: #666;
+            font-size: 0.85em;
+            font-style: italic;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+        
+        .badge.approved {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .badge.rejected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .badge.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-card .number {
+            font-size: 2em;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .stat-card .label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔔 Notification Service Test</h1>
+            <p>실시간 알림 시스템 테스트 페이지</p>
+        </div>
+        
+        <!-- 연결 설정 -->
+        <div class="card">
+            <h2>📡 연결 설정</h2>
+            <div class="input-group">
+                <label for="employeeId">직원 ID (Employee ID)</label>
+                <input type="number" id="employeeId" placeholder="예: 1" value="1">
+            </div>
+            <div class="button-group">
+                <button class="btn-primary" id="connectBtn" onclick="connect()">
+                    🔌 연결하기
+                </button>
+                <button class="btn-danger" id="disconnectBtn" onclick="disconnect()" disabled>
+                    🔌 연결 해제
+                </button>
+            </div>
+            <div id="status" class="status disconnected">
+                ⚠️ 연결되지 않음
+            </div>
+        </div>
+        
+        <!-- 알림 목록 -->
+        <div class="card">
+            <h2>📬 수신한 알림</h2>
+            <div class="button-group">
+                <button class="btn-info" onclick="clearNotifications()">
+                    🗑️ 알림 지우기
+                </button>
+                <button class="btn-success" onclick="sendTestNotification()">
+                    ✉️ 테스트 알림 받기
+                </button>
+            </div>
+            <div class="stats" id="stats" style="display: none;">
+                <div class="stat-card">
+                    <div class="number" id="totalCount">0</div>
+                    <div class="label">총 알림 수</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number" id="approvedCount">0</div>
+                    <div class="label">승인됨</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number" id="rejectedCount">0</div>
+                    <div class="label">반려됨</div>
+                </div>
+            </div>
+            <div id="notifications" class="notification-list">
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                    </svg>
+                    <p>아직 받은 알림이 없습니다</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 상태 확인 -->
+        <div class="card">
+            <h2>🔍 서비스 상태</h2>
+            <div class="button-group">
+                <button class="btn-info" onclick="checkConnectionStatus()">
+                    📊 연결 상태 확인
+                </button>
+                <button class="btn-success" onclick="checkServiceStats()">
+                    📈 서비스 통계 확인
+                </button>
+            </div>
+            <div id="serviceInfo" style="margin-top: 20px;"></div>
+        </div>
+    </div>
+
+    <script>
+        let stompClient = null;
+        let employeeId = null;
+        let notificationCount = 0;
+        let approvedCount = 0;
+        let rejectedCount = 0;
+
+        // WebSocket 연결
+        function connect() {
+            employeeId = document.getElementById('employeeId').value;
+            
+            if (!employeeId) {
+                alert('❌ 직원 ID를 입력하세요.');
+                return;
+            }
+
+            const socket = new SockJS('http://localhost:8084/ws?id=' + employeeId);
+            stompClient = Stomp.over(socket);
+            
+            stompClient.connect({}, function(frame) {
+                console.log('✅ Connected: ' + frame);
+                updateConnectionStatus(true);
+                
+                // 개인 알림 구독
+                stompClient.subscribe('/topic/notifications/' + employeeId, function(message) {
+                    console.log('📨 Notification received:', message.body);
+                    showNotification(JSON.parse(message.body));
+                });
+                
+                console.log('✅ 구독 완료: employeeId=' + employeeId);
+            }, function(error) {
+                console.error('❌ Connection error:', error);
+                updateConnectionStatus(false);
+                alert('❌ 연결 실패: ' + error);
+            });
+        }
+
+        // WebSocket 연결 해제
+        function disconnect() {
+            if (stompClient !== null) {
+                stompClient.disconnect(function() {
+                    console.log('🔌 Disconnected');
+                    updateConnectionStatus(false);
+                });
+            }
+        }
+
+        // 연결 상태 업데이트
+        function updateConnectionStatus(connected) {
+            const statusDiv = document.getElementById('status');
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            
+            if (connected) {
+                statusDiv.className = 'status connected';
+                statusDiv.innerHTML = '✅ 연결됨 (직원 ID: ' + employeeId + ')';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+            } else {
+                statusDiv.className = 'status disconnected';
+                statusDiv.innerHTML = '⚠️ 연결되지 않음';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+            }
+        }
+
+        // 알림 표시
+        function showNotification(notification) {
+            notificationCount++;
+            
+            // 통계 업데이트
+            if (notification.finalResult === 'approved') {
+                approvedCount++;
+            } else if (notification.finalResult === 'rejected') {
+                rejectedCount++;
+            }
+            updateStats();
+            
+            const notificationsDiv = document.getElementById('notifications');
+            
+            // 첫 알림이면 빈 상태 메시지 제거
+            if (notificationCount === 1) {
+                notificationsDiv.innerHTML = '';
+                document.getElementById('stats').style.display = 'grid';
+            }
+            
+            const notificationDiv = document.createElement('div');
+            notificationDiv.className = 'notification-item';
+            
+            let statusBadge = '';
+            if (notification.finalResult === 'approved') {
+                statusBadge = '<span class="badge approved">✓ 최종 승인</span>';
+            } else if (notification.finalResult === 'rejected') {
+                statusBadge = '<span class="badge rejected">✗ 반려됨</span>';
+            } else {
+                statusBadge = '<span class="badge pending">⏳ 진행 중</span>';
+            }
+            
+            let html = `
+                <div class="title">
+                    ${statusBadge}
+                    알림 #${notificationCount}
+                </div>
+                <div class="content">
+                    <strong>📋 제목:</strong> ${notification.title || 'N/A'}<br>
+                    <strong>🆔 요청 ID:</strong> ${notification.requestId || 'N/A'}<br>
+                    <strong>📊 현재 상태:</strong> ${notification.result || 'N/A'}<br>
+                    <strong>🎯 최종 결과:</strong> ${notification.finalResult || 'N/A'}<br>
+            `;
+            
+            if (notification.rejectedBy) {
+                html += `<strong>👤 반려자 ID:</strong> ${notification.rejectedBy}<br>`;
+            }
+            
+            html += `
+                    <strong>💬 메시지:</strong> ${notification.message || 'N/A'}
+                </div>
+                <div class="timestamp">
+                    🕐 ${new Date(notification.timestamp).toLocaleString('ko-KR')}
+                </div>
+            `;
+            
+            notificationDiv.innerHTML = html;
+            notificationsDiv.insertBefore(notificationDiv, notificationsDiv.firstChild);
+        }
+
+        // 통계 업데이트
+        function updateStats() {
+            document.getElementById('totalCount').textContent = notificationCount;
+            document.getElementById('approvedCount').textContent = approvedCount;
+            document.getElementById('rejectedCount').textContent = rejectedCount;
+        }
+
+        // 알림 지우기
+        function clearNotifications() {
+            if (confirm('모든 알림을 삭제하시겠습니까?')) {
+                document.getElementById('notifications').innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                        </svg>
+                        <p>아직 받은 알림이 없습니다</p>
+                    </div>
+                `;
+                notificationCount = 0;
+                approvedCount = 0;
+                rejectedCount = 0;
+                updateStats();
+                document.getElementById('stats').style.display = 'none';
+            }
+        }
+
+        // 테스트 알림 전송
+        async function sendTestNotification() {
+            if (!employeeId) {
+                alert('❌ 먼저 연결하세요.');
+                return;
+            }
+            
+            try {
+                const response = await fetch('http://localhost:8084/api/notifications/test/' + employeeId);
+                const result = await response.text();
+                console.log('✅ 테스트 알림 요청:', result);
+                alert('✅ 테스트 알림이 전송되었습니다.');
+            } catch (error) {
+                console.error('❌ 테스트 알림 전송 실패:', error);
+                alert('❌ 테스트 알림 전송 실패: ' + error);
+            }
+        }
+
+        // 연결 상태 확인
+        async function checkConnectionStatus() {
+            if (!employeeId) {
+                alert('❌ 먼저 연결하세요.');
+                return;
+            }
+            
+            try {
+                const response = await fetch('http://localhost:8084/api/notifications/status/' + employeeId);
+                const status = await response.json();
+                
+                const infoDiv = document.getElementById('serviceInfo');
+                infoDiv.innerHTML = `
+                    <div class="card" style="background: #f8f9fa; padding: 15px;">
+                        <h3 style="color: #667eea; margin-bottom: 10px;">연결 상태</h3>
+                        <p><strong>직원 ID:</strong> ${status.employeeId}</p>
+                        <p><strong>연결 상태:</strong> ${status.connected ? '✅ 연결됨' : '❌ 연결 안됨'}</p>
+                        <p><strong>세션 수:</strong> ${status.sessionCount}</p>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('❌ 상태 확인 실패:', error);
+                alert('❌ 상태 확인 실패: ' + error);
+            }
+        }
+
+        // 서비스 통계 확인
+        async function checkServiceStats() {
+            try {
+                const response = await fetch('http://localhost:8084/api/notifications/stats');
+                const stats = await response.json();
+                
+                const infoDiv = document.getElementById('serviceInfo');
+                infoDiv.innerHTML = `
+                    <div class="card" style="background: #f8f9fa; padding: 15px;">
+                        <h3 style="color: #667eea; margin-bottom: 10px;">서비스 통계</h3>
+                        <p><strong>연결된 사용자 수:</strong> ${stats.connectedUsers}</p>
+                        <p><strong>총 세션 수:</strong> ${stats.totalSessions}</p>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('❌ 통계 조회 실패:', error);
+                alert('❌ 통계 조회 실패: ' + error);
+            }
+        }
+
+        // 페이지 언로드 시 연결 해제
+        window.addEventListener('beforeunload', function() {
+            disconnect();
+        });
+    </script>
+</body>
+</html>
