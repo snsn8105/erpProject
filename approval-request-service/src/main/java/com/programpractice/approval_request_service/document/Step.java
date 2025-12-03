@@ -6,9 +6,11 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 // 결재 단계 내장 문서
 @Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

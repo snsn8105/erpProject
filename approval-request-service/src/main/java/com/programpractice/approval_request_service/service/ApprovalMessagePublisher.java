@@ -1,9 +1,12 @@
 package com.programpractice.approval_request_service.service;
 
+import java.util.List;
+
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 
 import com.programpractice.approval_request_service.config.RabbitMQConfig;
+import com.programpractice.approval_request_service.document.ApprovalRequest;
 import com.programpractice.approval_request_service.dto.ApprovalRequestMessage;
 
 import lombok.RequiredArgsConstructor;
@@ -53,6 +56,44 @@ public class ApprovalMessagePublisher {
             e.printStackTrace();
             
             throw new RuntimeException("메시지 발행 실패: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * 다음 단계 처리를 위해 Processing Service로 메시지 발행
+     * Listener에 있던 DTO 변환 로직을 이곳으로 캡슐화
+     */
+    public void publishNextStep(ApprovalRequest approvalRequest) {
+        try {
+            log.info("=== 다음 단계 메시지 발행 시작: requestId={} ===", approvalRequest.getRequestId());
+
+            // 1. 다음 단계(CurrentStep) 정보 DTO 생성
+            ApprovalRequestMessage.ApprovalStepDto nextStepDto = 
+                ApprovalRequestMessage.ApprovalStepDto.builder()
+                    .step(approvalRequest.getCurrentStepOrder())
+                    .approverId(approvalRequest.getCurrentStep().getApproverId().longValue())
+                    // 필요 시 status, comment 등은 초기화 상태로 보냄
+                    .build();
+            
+            // 2. 전체 메시지 구성
+            ApprovalRequestMessage message = ApprovalRequestMessage.builder()
+                    .id(approvalRequest.getId())
+                    .requestId(approvalRequest.getRequestId())
+                    .requesterId(approvalRequest.getRequesterId().longValue())
+                    .title(approvalRequest.getTitle())
+                    .content(approvalRequest.getContent())
+                    .steps(List.of(nextStepDto)) // 처리해야 할 다음 단계만 리스트에 담음
+                    .requestedAt(approvalRequest.getCreatedAt())
+                    .build();
+            
+            // 3. 발행 (기존 메서드 재사용)
+            publishApprovalRequest(message);
+            
+            log.info(">> 다음 단계(Step {}) 발행 완료", approvalRequest.getCurrentStepOrder());
+
+        } catch (Exception e) {
+            log.error("다음 단계 메시지 발행 실패: requestId={}", approvalRequest.getRequestId(), e);
+            throw new RuntimeException("메시지 발행 중 오류 발생", e);
         }
     }
 }

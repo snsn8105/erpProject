@@ -29,6 +29,13 @@ public class ApprovalProcessingService {
     private final EmployeeValidationService employeeValidationService;
     
     /**
+     * 추가: requestId로 존재 여부 확인
+     */
+    public boolean existsByRequestId(Integer requestId) {
+        return approvalRequestRepository.existsByRequestId(requestId);
+    }
+    
+    /**
      * 승인 요청 초기 처리 (RabbitMQ 메시지 수신 시)
      */
     public ApprovalRequest processApprovalRequest(ApprovalRequestMessage message) {
@@ -127,7 +134,7 @@ public class ApprovalProcessingService {
                 approvalRequest.getSteps().size(),
                 approvalRequest.getFinalStatus());
         
-        // 2. ⭐ 현재 단계 가져오기 (O(1) 접근)
+        // 2. 현재 단계 가져오기 (O(1) 접근 - currentStepOrder 사용)
         ApprovalStep currentStep = approvalRequest.getCurrentStep();
         if (currentStep == null) {
             log.error("처리할 승인 단계가 없음: requestId={}, currentStepOrder={}", 
@@ -155,22 +162,22 @@ public class ApprovalProcessingService {
             log.info("✅ 단계 승인 완료: step={}, approverId={}, comment={}", 
                     currentStep.getStep(), approverId, request.getComment());
             
-            // 4-2.  마지막 단계인지 확인 (승인 처리 후!)
+            // 4-2. 마지막 단계인지 확인 (승인 처리 후)
             if (approvalRequest.isLastStep()) {
                 // 모든 단계 승인 완료
                 approvalRequest.updateFinalStatus(ApprovalStatus.APPROVED);
                 log.info("🎉 최종 승인 완료: requestId={}, 모든 {}개 단계 승인됨", 
                         requestId, approvalRequest.getSteps().size());
             } else {
-                // 다음 단계로 포인터 이동
+                // 다음 단계로 포인터 이동 (currentStepOrder 증가)
                 approvalRequest.moveToNextStep();
-                log.info("➡️ 다음 단계로 이동: 현재 단계 {} -> 다음 단계 {}", 
+                log.info("➡️ 다음 단계로 이동: 이전 단계 {} -> 현재 단계 {}", 
                         currentStep.getStep(), approvalRequest.getCurrentStepOrder());
                 
                 // 다음 단계 정보 로깅
                 ApprovalStep nextStep = approvalRequest.getCurrentStep();
                 if (nextStep != null) {
-                    log.info("다음 승인자 정보: step={}, approverId={}", 
+                    log.info("다음 승인 대기자: step={}, approverId={}", 
                             nextStep.getStep(), nextStep.getApproverId());
                 }
             }
