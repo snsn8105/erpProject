@@ -32,7 +32,9 @@ data:
   RABBITMQ_USERNAME: "admin"
   
   # Service URLs
-  EMPLOYEE_SERVICE_URL: "http://localhost:8081"
+  EMPLOYEE_SERVICE_URL: "http://employee-service:8081"
+  # ▼ [추가] Notification Service 내부 주소 추가
+  NOTIFICATION_SERVICE_URL: "http://notification-service:8084"
 
 ---
 # ===============================================
@@ -462,6 +464,12 @@ spec:
             configMapKeyRef:
               name: erp-config
               key: EMPLOYEE_SERVICE_URL
+        # ▼ [추가] Notification Service URL 주입
+        - name: NOTIFICATION_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: erp-config
+              key: NOTIFICATION_SERVICE_URL
         resources:
           requests:
             memory: "512Mi"
@@ -525,6 +533,11 @@ spec:
             secretKeyRef:
               name: erp-secrets
               key: RABBITMQ_PASSWORD
+        - name: EMPLOYEE_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: erp-config
+              key: EMPLOYEE_SERVICE_URL
         resources:
           requests:
             memory: "512Mi"
@@ -620,7 +633,9 @@ metadata:
   name: erp-ingress
   namespace: erp-system
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/websocket-services: "notification-service"
 spec:
   ingressClassName: nginx
   rules:

@@ -100,6 +100,7 @@ public class SecurityConfig {
             
             // 인증 규칙: 모든 요청 허용
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/actuator/**").permitAll() // 헬스 체크 허용
                 .anyRequest().permitAll()  // 모든 요청 허용
             );
         
