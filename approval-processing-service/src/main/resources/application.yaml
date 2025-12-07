@@ -20,6 +20,11 @@ spring:
           max-attempts: 3
           multiplier: 2.0
 
+# Employee Service 연동
+employee:
+  service:
+    url: http://localhost:8081
+    
 server:
   port: 8083
 
@@ -27,3 +32,4 @@ logging:
   level:
     com.programpractice.approval_processing_service: DEBUG
     org.springframework.amqp: DEBUG
+    org.springframework.web.client: DEBUG

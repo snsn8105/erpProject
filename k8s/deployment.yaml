@@ -1,0 +1,664 @@
+# ===============================================
+# 1. Namespace
+# ===============================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: erp-system
+
+---
+# ===============================================
+# 2. ConfigMap - 공통 설정
+# ===============================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: erp-config
+  namespace: erp-system
+data:
+  # MySQL 설정
+  MYSQL_HOST: "mysql-service"
+  MYSQL_PORT: "3306"
+  MYSQL_DATABASE: "erp_employee_db"
+  
+  # MongoDB 설정
+  MONGODB_HOST: "mongodb-service"
+  MONGODB_PORT: "27017"
+  MONGODB_DATABASE: "erp_mongodb"
+  
+  # RabbitMQ 설정
+  RABBITMQ_HOST: "rabbitmq-service"
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_USERNAME: "admin"
+  
+  # Service URLs
+  EMPLOYEE_SERVICE_URL: "http://employee-service:8081"
+
+---
+# ===============================================
+# 3. Secret - 비밀번호
+# ===============================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: erp-secrets
+  namespace: erp-system
+type: Opaque
+stringData:
+  # MySQL 비밀번호
+  MYSQL_ROOT_PASSWORD: "root"
+  MYSQL_PASSWORD: "erpPassword"
+  
+  # MongoDB 비밀번호
+  MONGODB_ROOT_PASSWORD: "root"
+  
+  # RabbitMQ 비밀번호
+  RABBITMQ_PASSWORD: "admin123"
+
+---
+# ===============================================
+# 4. PersistentVolumeClaim - 데이터 영구 저장
+# ===============================================
+# MySQL PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+  namespace: erp-system
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+# MongoDB PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongodb-pvc
+  namespace: erp-system
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+# RabbitMQ PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rabbitmq-pvc
+  namespace: erp-system
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+# ===============================================
+# 5. MySQL Deployment & Service
+# ===============================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  namespace: erp-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        ports:
+        - containerPort: 3306
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: erp-secrets
+              key: MYSQL_ROOT_PASSWORD
+        - name: MYSQL_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: erp-config
+              key: MYSQL_DATABASE
+        - name: MYSQL_USER
+          value: "user"
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: erp-secrets
+              key: MYSQL_PASSWORD
+        - name: TZ
+          value: "Asia/Seoul"
+        volumeMounts:
+        - name: mysql-storage
+          mountPath: /var/lib/mysql
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+      volumes:
+      - name: mysql-storage
+        persistentVolumeClaim:
+          claimName: mysql-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service
+  namespace: erp-system
+spec:
+  selector:
+    app: mysql
+  ports:
+  - port: 3306
+    targetPort: 3306
+  type: ClusterIP
+
+---
+# ===============================================
+# 6. MongoDB Deployment & Service
+# ===============================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb
+  namespace: erp-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:8.0
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: "root"
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: erp-secrets
+              key: MONGODB_ROOT_PASSWORD
+        - name: TZ
+          value: "Asia/Seoul"
+        volumeMounts:
+        - name: mongodb-storage
+          mountPath: /data/db
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+      volumes:
+      - name: mongodb-storage
+        persistentVolumeClaim:
+          claimName: mongodb-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-service
+  namespace: erp-system
+spec:
+  selector:
+    app: mongodb
+  ports:
+  - port: 27017
+    targetPort: 27017
+  type: ClusterIP
+
+---
+# ===============================================
+# 7. RabbitMQ Deployment & Service
+# ===============================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq
+  namespace: erp-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec:
+      containers:
+      - name: rabbitmq
+        image: rabbitmq:3.13-management
+        ports:
+        - containerPort: 5672
+          name: amqp
+        - containerPort: 15672
+          name: management
+        env:
+        - name: RABBITMQ_DEFAULT_USER
+          valueFrom:
+            configMapKeyRef:
+              name: erp-config
+              key: RABBITMQ_USERNAME
+        - name: RABBITMQ_DEFAULT_PASS
+          valueFrom:
+            secretKeyRef:
+              name: erp-secrets
+              key: RABBITMQ_PASSWORD
+        - name: TZ
+          value: "Asia/Seoul"
+        volumeMounts:
+        - name: rabbitmq-storage
+          mountPath: /var/lib/rabbitmq
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+      volumes:
+      - name: rabbitmq-storage
+        persistentVolumeClaim:
+          claimName: rabbitmq-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq-service
+  namespace: erp-system
+spec:
+  selector:
+    app: rabbitmq
+  ports:
+  - port: 5672
+    targetPort: 5672
+    name: amqp
+  - port: 15672
+    targetPort: 15672
+    name: management
+  type: ClusterIP
+
+---
+# RabbitMQ Management UI - NodePort (외부 접근용)
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq-management
+  namespace: erp-system
+spec:
+  selector:
+    app: rabbitmq
+  ports:
+  - port: 15672
+    targetPort: 15672
+    nodePort: 30672
+  type: NodePort
+
+---
+# ===============================================
+# 8. Employee Service Deployment & Service
+# ===============================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: employee-service
+  namespace: erp-system
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: employee-service
+  template:
+    metadata:
+      labels:
+        app: employee-service
+    spec:
+      containers:
+      - name: employee-service
+        image: employee-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8081
+        env:
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:mysql://mysql-service:3306/erp_employee_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul"
+        - name: SPRING_DATASOURCE_USERNAME
+          value: "user"
+        - name: SPRING_DATASOURCE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: erp-secrets
+              key: MYSQL_PASSWORD
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8081
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8081
+          initialDelaySeconds: 30
+          periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: employee-service
+  namespace: erp-system
+spec:
+  selector:
+    app: employee-service
+  ports:
+  - port: 8081
+    targetPort: 8081
+  type: ClusterIP
+
+---
+# ===============================================
+# 9. Approval Request Service Deployment & Service
+# ===============================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: approval-request-service
+  namespace: erp-system
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: approval-request-service
+  template:
+    metadata:
+      labels:
+        app: approval-request-service
+    spec:
+      containers:
+      - name: approval-request-service
+        image: approval-request-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8082
+        env:
+        - name: SPRING_DATA_MONGODB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: erp-config
+              key: MONGODB_HOST
+        - name: SPRING_DATA_MONGODB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: erp-config
+              key: MONGODB_PORT
+        - name: SPRING_DATA_MONGODB_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: erp-config
+              key: MONGODB_DATABASE
+        - name: SPRING_DATA_MONGODB_USERNAME
+          value: "root"
+        - name: SPRING_DATA_MONGODB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: erp-secrets
+              key: MONGODB_ROOT_PASSWORD
+        - name: SPRING_RABBITMQ_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: erp-config
+              key: RABBITMQ_HOST
+        - name: SPRING_RABBITMQ_USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: erp-config
+              key: RABBITMQ_USERNAME
+        - name: SPRING_RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: erp-secrets
+              key: RABBITMQ_PASSWORD
+        - name: EMPLOYEE_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: erp-config
+              key: EMPLOYEE_SERVICE_URL
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: approval-request-service
+  namespace: erp-system
+spec:
+  selector:
+    app: approval-request-service
+  ports:
+  - port: 8082
+    targetPort: 8082
+  type: ClusterIP
+
+---
+# ===============================================
+# 10. Approval Processing Service Deployment & Service
+# ===============================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: approval-processing-service
+  namespace: erp-system
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: approval-processing-service
+  template:
+    metadata:
+      labels:
+        app: approval-processing-service
+    spec:
+      containers:
+      - name: approval-processing-service
+        image: approval-processing-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8083
+        env:
+        - name: SPRING_RABBITMQ_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: erp-config
+              key: RABBITMQ_HOST
+        - name: SPRING_RABBITMQ_USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: erp-config
+              key: RABBITMQ_USERNAME
+        - name: SPRING_RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: erp-secrets
+              key: RABBITMQ_PASSWORD
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: approval-processing-service
+  namespace: erp-system
+spec:
+  selector:
+    app: approval-processing-service
+  ports:
+  - port: 8083
+    targetPort: 8083
+  type: ClusterIP
+
+---
+# ===============================================
+# 11. Notification Service Deployment & Service
+# ===============================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: erp-system
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      containers:
+      - name: notification-service
+        image: notification-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8084
+        env:
+        - name: SPRING_RABBITMQ_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: erp-config
+              key: RABBITMQ_HOST
+        - name: SPRING_RABBITMQ_USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: erp-config
+              key: RABBITMQ_USERNAME
+        - name: SPRING_RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: erp-secrets
+              key: RABBITMQ_PASSWORD
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: erp-system
+spec:
+  selector:
+    app: notification-service
+  ports:
+  - port: 8084
+    targetPort: 8084
+  type: ClusterIP
+
+---
+# ===============================================
+# 12. Ingress - 외부 접근
+# ===============================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: erp-ingress
+  namespace: erp-system
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: erp.local
+    http:
+      paths:
+      - path: /employees
+        pathType: Prefix
+        backend:
+          service:
+            name: employee-service
+            port:
+              number: 8081
+      - path: /approvals
+        pathType: Prefix
+        backend:
+          service:
+            name: approval-request-service
+            port:
+              number: 8082
+      - path: /process
+        pathType: Prefix
+        backend:
+          service:
+            name: approval-processing-service
+            port:
+              number: 8083
+      - path: /ws
+        pathType: Prefix
+        backend:
+          service:
+            name: notification-service
+            port:
+              number: 8084
+      - path: /api/notifications
+        pathType: Prefix
+        backend:
+          service:
+            name: notification-service
+            port:
+              number: 8084
