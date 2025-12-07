@@ -464,7 +464,7 @@ spec:
             configMapKeyRef:
               name: erp-config
               key: EMPLOYEE_SERVICE_URL
-        # ▼ [추가] Notification Service URL 주입
+        # [추가] Notification Service URL 주입
         - name: NOTIFICATION_SERVICE_URL
           valueFrom:
             configMapKeyRef:
@@ -502,7 +502,7 @@ metadata:
   name: approval-processing-service
   namespace: erp-system
 spec:
-  replicas: 2
+  replicas: 1 # In-memory 작업을 위해 2 -> 1 로 수정
   selector:
     matchLabels:
       app: approval-processing-service
