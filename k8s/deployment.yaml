@@ -570,7 +570,7 @@ metadata:
   name: notification-service
   namespace: erp-system
 spec:
-  replicas: 2
+  replicas: 1 # 2 -> 1로 변경 (WebSocket 세션 불일치 문제 방지)
   selector:
     matchLabels:
       app: notification-service
