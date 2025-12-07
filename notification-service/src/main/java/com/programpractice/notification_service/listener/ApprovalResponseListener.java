@@ -1,11 +1,9 @@
 package com.programpractice.notification_service.listener;
 
-import com.programpractice.notification_service.config.RabbitMQConfig;
 import com.programpractice.notification_service.dto.ApprovalResponseMessage;
 import com.programpractice.notification_service.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
 // RabbitMQ 승인 응답 메시지 리스너
@@ -20,7 +18,7 @@ public class ApprovalResponseListener {
     /**
      * 승인 응답 메시지 수신 및 WebSocket 전송
      */
-    @RabbitListener(queues = RabbitMQConfig.APPROVAL_RESPONSE_QUEUE)
+    // @RabbitListener(queues = RabbitMQConfig.APPROVAL_RESPONSE_QUEUE)
     public void handleApprovalResponse(ApprovalResponseMessage message) {
         try {
             log.info("=== 승인 응답 메시지 수신 ===");
